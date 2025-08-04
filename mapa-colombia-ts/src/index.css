@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@layer base {
+  .department {
+    @apply fill-gray-300 stroke-gray-600 transition-all duration-200 ease-in-out cursor-pointer ;
+    stroke-width: 0.5;
+  }
+  .department:hover {
+    @apply fill-gray-400 dark:fill-gray-500;
+    transform: translateY(-1px);
+  }
+  .department.visited-some {
+    @apply fill-emerald-300 dark:fill-emerald-800;
+  }
+  .department.visited-some:hover {
+    @apply fill-emerald-400 dark:fill-emerald-700;
+  }
+  .department.visited-all {
+    @apply fill-emerald-600 dark:fill-emerald-500;
+  }
+  .department.visited-all:hover {
+    @apply fill-emerald-700 dark:fill-emerald-400;
+  }
+}
