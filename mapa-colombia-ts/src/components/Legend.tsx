@@ -4,9 +4,9 @@ const LegendItem: React.FC<{ colorClass: string; label: string; count: number }>
     <div className="flex items-center justify-between">
         <div className="flex items-center">
             <div className={`w-4 h-4 rounded-full ${colorClass}`}></div>
-            <span className="ml-2 text-sm text-gray-600">{label}</span>
+            <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">{label}</span>
         </div>
-        <span className="text-sm font-medium text-gray-700">{count}</span>
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{count}</span>
     </div>
 );
 
@@ -18,12 +18,12 @@ interface LegendProps {
 
 const Legend: React.FC<LegendProps> = ({ completed, partial, unvisited }) => {
     return (
-        <div className="bg-white p-4 rounded-lg border">
-            <h3 className="font-semibold text-gray-700 mb-3">Leyenda</h3>
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-700">
+            <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-3">Leyenda</h3>
             <div className="space-y-2">
-                <LegendItem colorClass="bg-emerald-600" label="Atractivos Completados" count={completed} />
-                <LegendItem colorClass="bg-emerald-300" label="Atractivos Parcialmente Visitados" count={partial} />
-                <LegendItem colorClass="bg-gray-300" label="Atractivos Sin Visitar" count={unvisited} />
+                <LegendItem colorClass="bg-emerald-600 dark:bg-emerald-500" label="Completados" count={completed} />
+                <LegendItem colorClass="bg-yellow-300 dark:bg-yellow-500" label="Parcialmente Visitados" count={partial} />
+                <LegendItem colorClass="bg-gray-300 dark:bg-gray-600" label="Sin Visitar" count={unvisited} />
             </div>
         </div>
     );
