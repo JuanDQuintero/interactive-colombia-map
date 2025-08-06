@@ -1,4 +1,3 @@
-// src/hooks/useMapStats.ts
 import { useMemo } from 'react';
 import { attractionsData } from '../data/attractionsData';
 import { departmentsData } from '../data/colombiaMapData';
@@ -15,14 +14,12 @@ export const useMapStats = (visitedAttractions: Record<string, string[]>) => {
 
             if (isDepartmentInVisitedList) {
                 if (totalInDeptCount > 0) {
-                    // Departamento tiene atractivos, se revisa si está parcial o completo
                     if (visitedInDeptCount === totalInDeptCount) {
                         completed++;
                     } else {
                         partial++;
                     }
                 } else {
-                    // Departamento NO tiene atractivos, pero está marcado, así que se cuenta como completado.
                     completed++;
                 }
             }

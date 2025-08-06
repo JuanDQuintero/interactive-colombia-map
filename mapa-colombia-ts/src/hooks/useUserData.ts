@@ -1,4 +1,3 @@
-// src/hooks/useUserData.ts
 import { type User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
@@ -33,7 +32,7 @@ export const useUserData = (user: User | null) => {
 
         const newVisited = { ...visitedAttractions };
 
-        if (attractionId) { // Lógica para un atractivo específico
+        if (attractionId) {
             const deptVisited = newVisited[departmentId] || [];
             if (deptVisited.includes(attractionId)) {
                 newVisited[departmentId] = deptVisited.filter(id => id !== attractionId);
@@ -43,11 +42,11 @@ export const useUserData = (user: User | null) => {
             } else {
                 newVisited[departmentId] = [...deptVisited, attractionId];
             }
-        } else { // Lógica para un departamento sin atractivos
+        } else {
             if (departmentId in newVisited) {
-                delete newVisited[departmentId]; // Desmarcar
+                delete newVisited[departmentId];
             } else {
-                newVisited[departmentId] = []; // Marcar como visitado (con lista vacía)
+                newVisited[departmentId] = [];
             }
         }
 
