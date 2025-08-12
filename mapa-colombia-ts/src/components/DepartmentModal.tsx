@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { loadAttractions, type Attraction } from '../data/attractionsData';
+import React, { useMemo, useState } from 'react';
+import { type Attraction } from '../data/attractionsData';
+import { useAttractionsData } from '../hooks/useAttractionsData';
 import Loader from './UI/Loader';
 
 interface DepartmentModalProps {
@@ -7,38 +8,35 @@ interface DepartmentModalProps {
     departmentName: string;
     visitedInDept: string[];
     onClose: () => void;
-    onAttractionToggle: (departmentId: string, attractionId: string) => void;
+    saveDepartmentAttractions: (departmentId: string, selectedAttractions: string[]) => Promise<void>
 }
 
-const DepartmentModal: React.FC<DepartmentModalProps> = ({ departmentId, departmentName, visitedInDept, onClose, onAttractionToggle }) => {
-    const [attractions, setAttractions] = useState<Attraction[]>([]);
+const DepartmentModal: React.FC<DepartmentModalProps> = ({
+    departmentId,
+    departmentName,
+    visitedInDept,
+    onClose,
+    saveDepartmentAttractions
+}) => {
     const [selectedAttractions, setSelectedAttractions] = useState<string[]>(visitedInDept);
-    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        async function fetchData() {
-            try {
-                const data = await loadAttractions();
-                setAttractions(data[departmentId] || []);
-            } catch (err) {
-                console.error('Error cargando atracciones:', err);
-            } finally {
-                setLoading(false);
-            }
-        }
-        fetchData();
-    }, [departmentId]);
+    const { data: attractionsByDept, loading } = useAttractionsData();
 
-    // Usamos 'reduce' para crear un objeto donde cada clave es una categoría
-    // y su valor es un array de los atractivos de esa categoría.
-    const groupedAttractions = attractions.reduce((acc, attraction) => {
-        const category = attraction.category || 'Otros';
-        if (!acc[category]) {
-            acc[category] = []; // Si la categoría no existe en el acumulador, la creamos
-        }
-        acc[category].push(attraction);
-        return acc;
-    }, {} as Record<string, Attraction[]>);
+    // Solo los atractivos del departamento actual
+    const attractions = useMemo(
+        () => attractionsByDept[departmentId] || [],
+        [attractionsByDept, departmentId]
+    );
+
+    // Agrupar por categoría
+    const groupedAttractions = useMemo(() => {
+        return attractions.reduce((acc, attraction) => {
+            const category = attraction.category || 'Otros';
+            if (!acc[category]) acc[category] = [];
+            acc[category].push(attraction);
+            return acc;
+        }, {} as Record<string, Attraction[]>);
+    }, [attractions]);
 
     const handleItemClick = (attractionId: string) => {
         setSelectedAttractions((prev) =>
@@ -48,17 +46,8 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({ departmentId, departm
         );
     };
 
-    const handleAccept = () => {
-        selectedAttractions.forEach((id) => {
-            if (!visitedInDept.includes(id)) {
-                onAttractionToggle(departmentId, id);
-            }
-        });
-        visitedInDept.forEach((id) => {
-            if (!selectedAttractions.includes(id)) {
-                onAttractionToggle(departmentId, id);
-            }
-        });
+    const handleAccept = async () => {
+        await saveDepartmentAttractions(departmentId, selectedAttractions);
         onClose();
     };
 
@@ -75,7 +64,6 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({ departmentId, departm
             <div className="bg-white dark:bg-gray-700 rounded-lg shadow-xl p-6 w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-center dark:border-gray-700 pb-3 mb-4">
                     <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{departmentName}</h2>
-
                     <button onClick={onClose} className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-3xl leading-none cursor-pointer">&times;</button>
                 </div>
                 <p className='text-gray-800 dark:text-gray-100 mb-4'>Selecciona los lugares que visitaste y confirma para guardar.</p>
@@ -84,7 +72,7 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({ departmentId, departm
                         <div key={category} className="mb-8">
                             <h3 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 pb-2">{category}</h3>
                             <ul className="space-y-4">
-                                {(attractionsInCategory as Attraction[]).map(attraction => {
+                                {attractionsInCategory.map(attraction => {
                                     const isVisited = selectedAttractions.includes(attraction.id);
                                     return (
                                         <li
@@ -99,7 +87,7 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({ departmentId, departm
                                                 onError={(e) => { e.currentTarget.src = 'https://placehold.co/128x128/cccccc/ffffff?text=Error'; }}
                                             />
                                             <div className="flex-grow pt-1">
-                                                <p className={`text-lg font-semibold text-gray-800 dark:text-gray-100`}>
+                                                <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
                                                     {attraction.name}
                                                 </p>
                                                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
