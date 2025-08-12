@@ -48,8 +48,6 @@ const MainPage: React.FC<MainPageProps> = ({ user, logout }) => {
         return <Loader />
     }
 
-    console.log(user.photoURL);
-
     return (
         <div className="min-h-screen bg-gray-50 font-sans dark:bg-gray-900">
             {tooltip && (
