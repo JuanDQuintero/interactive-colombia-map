@@ -1,4 +1,3 @@
-// src/pages/MainPage.tsx
 import { type User } from 'firebase/auth';
 import { type MouseEvent, useState } from 'react';
 import ColombiaMap from '../components/ColombiaMap';
@@ -18,9 +17,13 @@ interface MainPageProps {
 }
 
 const MainPage: React.FC<MainPageProps> = ({ user, logout }) => {
-    const { visitedAttractions, toggleAttraction, isLoadingData } = useUserData(user);
-    const { completedCount, partialCount, unvisitedCount, totalProgress } = useMapStats(visitedAttractions);
+    const {
+        visitedAttractions,
+        isLoadingData,
+        saveDepartmentAttractions,
+    } = useUserData(user);
 
+    const { completedCount, partialCount, unvisitedCount, totalProgress } = useMapStats(visitedAttractions);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedDept, setSelectedDept] = useState<{ id: string, name: string } | null>(null);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -48,8 +51,6 @@ const MainPage: React.FC<MainPageProps> = ({ user, logout }) => {
         return <Loader />
     }
 
-    console.log(user.photoURL);
-
     return (
         <div className="min-h-screen bg-gray-50 font-sans dark:bg-gray-900">
             {tooltip && (
@@ -63,7 +64,7 @@ const MainPage: React.FC<MainPageProps> = ({ user, logout }) => {
                     departmentName={selectedDept.name}
                     visitedInDept={visitedAttractions[selectedDept.id] || []}
                     onClose={() => setIsModalOpen(false)}
-                    onAttractionToggle={toggleAttraction} />
+                    saveDepartmentAttractions={saveDepartmentAttractions} />
             )}
             <div className="container mx-auto p-4 sm:p-6 md:p-8">
                 <header className="flex justify-between items-center mb-6">

@@ -1,15 +1,17 @@
 import { useMemo } from 'react';
-import { attractionsData } from '../data/attractionsData';
 import { departmentsData } from '../data/colombiaMapData';
+import { useAttractionsData } from './useAttractionsData';
 
 export const useMapStats = (visitedAttractions: Record<string, string[]>) => {
+    const { data: attractionsByDept } = useAttractionsData();
+
     return useMemo(() => {
         let completed = 0;
         let partial = 0;
 
         Object.keys(departmentsData).forEach(depId => {
             const visitedInDeptCount = visitedAttractions[depId]?.length || 0;
-            const totalInDeptCount = attractionsData[depId]?.length || 0;
+            const totalInDeptCount = attractionsByDept[depId]?.length || 0;
             const isDepartmentInVisitedList = depId in visitedAttractions;
 
             if (isDepartmentInVisitedList) {
@@ -35,5 +37,5 @@ export const useMapStats = (visitedAttractions: Record<string, string[]>) => {
             unvisitedCount: unvisited,
             totalProgress: progress,
         };
-    }, [visitedAttractions]);
+    }, [visitedAttractions, attractionsByDept]);
 };

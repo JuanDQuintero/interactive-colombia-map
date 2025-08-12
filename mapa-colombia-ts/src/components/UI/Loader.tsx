@@ -8,7 +8,7 @@ const Loader: React.FC = () => {
                     100% { transform: perspective(600px) rotateY(360deg); }
                 }
                 .flip-animation {
-                    animation: flip 1.5s ease-in-out infinite;
+                    animation: flip .6s ease-in-out infinite;
                     transform-style: preserve-3d;
                 }
             `}</style>
