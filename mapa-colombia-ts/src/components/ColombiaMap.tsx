@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { departmentsData } from '../data/colombiaMapData';
 import { useAttractionsData } from '../hooks/useAttractionsData';
@@ -11,7 +10,11 @@ interface ColombiaMapProps {
 
 const ColombiaMap: React.FC<ColombiaMapProps> = ({ visitedAttractions, onDepartmentClick, onDepartmentHover }) => {
     const { data: attractionsData } = useAttractionsData();
+
     const getDepartmentClass = (id: string) => {
+        if (attractionsData[id] === undefined) {
+            return 'department';
+        }
         const visitedInDept = visitedAttractions[id] || [];
         const totalAttractions = attractionsData[id]?.length || 0;
 

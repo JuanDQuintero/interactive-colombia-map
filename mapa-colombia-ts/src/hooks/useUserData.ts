@@ -1,7 +1,8 @@
 import { type User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { db } from '../firebase';
+import { useAttractionsData } from './useAttractionsData';
 
 interface UserData {
     visitedAttractions: Record<string, string[]>;
@@ -11,6 +12,9 @@ export const useUserData = (user: User | null) => {
     const [userData, setUserData] = useState<UserData>({ visitedAttractions: {} });
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Carga los atractivos actuales
+    const { data: attractionsByDept } = useAttractionsData();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -29,7 +33,6 @@ export const useUserData = (user: User | null) => {
                     const data = userDoc.data() as UserData;
                     setUserData(data || { visitedAttractions: {} });
                 } else {
-                    // Initialize new user document
                     await setDoc(userDocRef, { visitedAttractions: {} });
                     setUserData({ visitedAttractions: {} });
                 }
@@ -43,6 +46,16 @@ export const useUserData = (user: User | null) => {
 
         fetchData();
     }, [user]);
+
+    // Filter IDs invalids
+    const cleanedVisitedAttractions = useMemo(() => {
+        const cleaned: Record<string, string[]> = {};
+        Object.entries(userData.visitedAttractions).forEach(([deptId, ids]) => {
+            const validIds = (attractionsByDept[deptId] || []).map(a => a.id);
+            cleaned[deptId] = ids.filter(id => validIds.includes(id));
+        });
+        return cleaned;
+    }, [userData.visitedAttractions, attractionsByDept]);
 
     // Update Firebase when local data changes
     const updateFirebase = async (newData: Partial<UserData>) => {
@@ -73,7 +86,7 @@ export const useUserData = (user: User | null) => {
     };
 
     return {
-        visitedAttractions: userData.visitedAttractions,
+        visitedAttractions: cleanedVisitedAttractions,
         saveDepartmentAttractions,
         isLoadingData,
         error

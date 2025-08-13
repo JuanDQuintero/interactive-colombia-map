@@ -8,7 +8,7 @@ interface DepartmentModalProps {
     departmentName: string;
     visitedInDept: string[];
     onClose: () => void;
-    saveDepartmentAttractions: (departmentId: string, selectedAttractions: string[]) => Promise<void>
+    saveDepartmentAttractions: (departmentId: string, selectedAttractions: string[]) => Promise<void>;
 }
 
 const DepartmentModal: React.FC<DepartmentModalProps> = ({
@@ -16,10 +16,10 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({
     departmentName,
     visitedInDept,
     onClose,
-    saveDepartmentAttractions
+    saveDepartmentAttractions,
 }) => {
     const [selectedAttractions, setSelectedAttractions] = useState<string[]>(visitedInDept);
-
+    const [loadingData, setLoadingData] = useState(false);
     const { data: attractionsByDept, loading } = useAttractionsData();
 
     // Solo los atractivos del departamento actual
@@ -47,11 +47,13 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({
     };
 
     const handleAccept = async () => {
+        setLoadingData(true);
         await saveDepartmentAttractions(departmentId, selectedAttractions);
+        setLoadingData(false);
         onClose();
     };
 
-    if (loading) {
+    if (loading || loadingData) {
         return (
             <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">
                 <Loader />
