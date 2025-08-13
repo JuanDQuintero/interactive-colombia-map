@@ -64,7 +64,8 @@ const MainPage: React.FC<MainPageProps> = ({ user, logout }) => {
                     departmentName={selectedDept.name}
                     visitedInDept={visitedAttractions[selectedDept.id] || []}
                     onClose={() => setIsModalOpen(false)}
-                    saveDepartmentAttractions={saveDepartmentAttractions} />
+                    saveDepartmentAttractions={saveDepartmentAttractions}
+                />
             )}
             <div className="container mx-auto p-4 sm:p-6 md:p-8">
                 <header className="flex justify-between items-center mb-6">
