@@ -2,7 +2,7 @@ import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headless
 import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid';
 import { getAuth } from 'firebase/auth';
 import { addDoc, collection } from 'firebase/firestore';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { db } from '../firebase';
 import Button from './UI/Button';
 import Loader from './UI/Loader';
@@ -20,17 +20,26 @@ const categories = [
     "Otros"
 ];
 
+// Tipos para las opciones de imagen
+type ImageSource = 'url' | 'upload';
+type ImageData = {
+    url: string;
+    base64?: string;
+    file?: File;
+};
+
 const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmentId, onClose }) => {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        imageUrl: '',
         category: categories[0]
     });
-    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imageSource, setImageSource] = useState<ImageSource>('url');
+    const [imageData, setImageData] = useState<ImageData>({ url: '' });
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
-    const [imageError, setImageError] = useState(false);
+    const [imageError, setImageError] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const auth = getAuth();
     const currentUser = auth.currentUser;
@@ -47,18 +56,27 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
         setLoading(true);
 
         try {
-            // Validar que la URL de la imagen sea válida
-            if (!isValidUrl(formData.imageUrl) && !imageFile) {
-                alert("Por favor ingresa una URL de imagen válida o sube un archivo");
+            // Validar que tengamos una imagen válida
+            if (!isValidImage()) {
+                setImageError("Por favor proporciona una imagen válida");
                 setLoading(false);
                 return;
+            }
+
+            // Preparar datos de la imagen
+            let imageToSave = '';
+            if (imageSource === 'url') {
+                imageToSave = imageData.url;
+            } else if (imageData.base64) {
+                imageToSave = imageData.base64;
             }
 
             // Guardar propuesta en Firestore
             const proposalRef = await addDoc(collection(db, 'attractionProposals'), {
                 name: formData.name,
                 description: formData.description,
-                image: formData.imageUrl,
+                image: imageToSave,
+                imageSource: imageSource, // Guardamos la fuente para saber cómo procesarla después
                 category: formData.category,
                 departmentId,
                 status: 'pending',
@@ -81,24 +99,7 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
             setSuccess(true);
         } catch (error: unknown) {
             console.error("Error al enviar la propuesta:", error);
-
-            if (
-                typeof error === 'object' &&
-                error !== null &&
-                'code' in error &&
-                typeof (error as { code: unknown }).code === 'string'
-            ) {
-                const code = (error as { code: string }).code;
-                if (code === 'storage/unauthorized') {
-                    alert("No tienes permisos para subir imágenes. Por favor inicia sesión.");
-                } else if (code === 'storage/canceled') {
-                    alert("La subida fue cancelada.");
-                } else {
-                    alert("Ocurrió un error al enviar la propuesta. Por favor intenta nuevamente.");
-                }
-            } else {
-                alert("Ocurrió un error al enviar la propuesta. Por favor intenta nuevamente.");
-            }
+            alert("Ocurrió un error al enviar la propuesta. Por favor intenta nuevamente.");
         } finally {
             setLoading(false);
         }
@@ -107,10 +108,47 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        // Resetear error de imagen cuando se cambia la URL
-        if (name === 'imageUrl') {
-            setImageError(false);
+    };
+
+    const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const url = e.target.value;
+        setImageData({ url });
+        setImageError(null);
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validar tipo de archivo
+        if (!file.type.startsWith('image/')) {
+            setImageError("Por favor selecciona un archivo de imagen válido");
+            return;
         }
+
+        // Validar tamaño (máximo 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            setImageError("La imagen no debe superar los 2MB");
+            return;
+        }
+
+        setImageError(null);
+
+        // Convertir a Base64
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            if (event.target?.result) {
+                setImageData({
+                    url: URL.createObjectURL(file), // Para la vista previa
+                    base64: event.target.result as string,
+                    file: file
+                });
+            }
+        };
+        reader.onerror = () => {
+            setImageError("Error al procesar la imagen");
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleCategoryChange = (category: string) => {
@@ -126,22 +164,43 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
         }
     };
 
+    const isValidImage = (): boolean => {
+        if (imageSource === 'url') {
+            return imageData.url !== '' && isValidUrl(imageData.url);
+        } else {
+            return imageData.base64 !== undefined && imageData.base64 !== '';
+        }
+    };
+
     const handleImageError = () => {
-        setImageError(true);
+        setImageError("No se pudo cargar la imagen");
     };
 
     const clearImage = () => {
-        setFormData(prev => ({ ...prev, imageUrl: '' }));
-        setImageFile(null);
-        setImageError(false);
+        setImageData({ url: '' });
+        setImageError(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const switchImageSource = (source: ImageSource) => {
+        setImageSource(source);
+        setImageData({ url: '' });
+        setImageError(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     };
 
     const disabledSubmit = useMemo(() => {
         return !formData.name ||
             !formData.description ||
-            (!formData.imageUrl && !imageFile) ||
-            (Boolean(formData.imageUrl) && !isValidUrl(formData.imageUrl));
-    }, [formData.name, formData.description, formData.imageUrl, imageFile]);
+            !isValidImage();
+    }, [formData.name, formData.description, imageData, imageSource]);
+
+    // Obtener la URL para la vista previa
+    const previewUrl = imageSource === 'url' ? imageData.url : imageData.url;
 
     return (
         <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4" onClick={onClose}>
@@ -245,48 +304,73 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
 
                             {/* Selector de fuente de imagen */}
                             <div className="flex space-x-2 mb-3">
-                                <p className='text-xs text-gray-400 dark:text-gray-300' >Pega la URL de la imagen</p>
+                                <button
+                                    type="button"
+                                    className={`px-3 py-1 text-sm rounded-lg transition-colors ${imageSource === 'url' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+                                    onClick={() => switchImageSource('url')}
+                                >
+                                    Usar URL
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`px-3 py-1 text-sm rounded-lg transition-colors ${imageSource === 'upload' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+                                    onClick={() => switchImageSource('upload')}
+                                >
+                                    Subir imagen
+                                </button>
                             </div>
 
-                            <div className="space-y-2">
-                                <input
-                                    type="url"
-                                    name="imageUrl"
-                                    className="block w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-colors"
-                                    placeholder="https://ejemplo.com/imagen.jpg"
-                                    value={formData.imageUrl}
-                                    onChange={handleChange}
-                                    required
-                                />
-                                {formData.imageUrl && !isValidUrl(formData.imageUrl) && (
-                                    <p className="text-sm text-red-600 dark:text-red-400">
-                                        Por favor ingresa una URL válida
+                            {imageSource === 'url' ? (
+                                <div className="space-y-2">
+                                    <input
+                                        type="url"
+                                        className="block w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-colors"
+                                        placeholder="https://ejemplo.com/imagen.jpg"
+                                        value={imageData.url}
+                                        onChange={handleImageUrlChange}
+                                        required
+                                    />
+                                    {imageData.url && !isValidUrl(imageData.url) && (
+                                        <p className="text-sm text-red-600 dark:text-red-400">
+                                            Por favor ingresa una URL válida
+                                        </p>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 dark:file:bg-blue-900/30 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-900/40 transition-colors"
+                                        onChange={handleFileUpload}
+                                    />
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        Formatos aceptados: JPG, PNG, WEBP. Tamaño máximo: 2MB
                                     </p>
-                                )}
-                            </div>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Vista previa de la imagen */}
-                        {(formData.imageUrl && !imageError) && (
+                        {previewUrl && !imageError && (
                             <div className="mt-2">
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     Vista previa
                                 </label>
-                                <div className="relative w-full h-48 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                                <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-200 dark:bg-gray-600">
                                     <img
-                                        src={formData.imageUrl}
+                                        src={previewUrl}
                                         alt="Vista previa"
                                         className="w-full h-full object-cover"
                                         onError={handleImageError}
-                                        onLoad={() => setImageError(false)}
                                     />
                                     <button
                                         type="button"
                                         onClick={clearImage}
-                                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
+                                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
                                         aria-label="Eliminar imagen"
                                     >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                         </svg>
                                     </button>
@@ -297,7 +381,7 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                         {imageError && (
                             <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                                 <p className="text-sm text-red-600 dark:text-red-400">
-                                    No se pudo cargar la imagen. Por favor verifica la URL o selecciona otra imagen.
+                                    {imageError}
                                 </p>
                             </div>
                         )}
@@ -344,7 +428,6 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                             </Listbox>
                         </div>
 
-
                         <div className="flex justify-end space-x-3 pt-4">
                             <Button
                                 variant="outline"
@@ -354,6 +437,7 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                             </Button>
                             <Button
                                 variant="primary"
+                                type="submit"
                                 disabled={disabledSubmit}
                             >
                                 Enviar propuesta

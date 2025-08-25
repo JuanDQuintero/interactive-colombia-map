@@ -44,7 +44,7 @@ const AttractionCard: React.FC<AttractionCardProps> = ({ attraction, onViewDetai
                         className="w-full h-full object-cover"
                         onError={handleImageError}
                         onLoad={handleImageLoad}
-                        loading="lazy" // Carga diferida para mejorar rendimiento
+                        loading="lazy"
                     />
                 )}
 
