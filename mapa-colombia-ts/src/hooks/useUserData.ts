@@ -47,15 +47,25 @@ export const useUserData = (user: User | null) => {
         fetchData();
     }, [user]);
 
-    // Filter IDs invalids
     const cleanedVisitedAttractions = useMemo(() => {
+        if (isLoadingData) return {};
         const cleaned: Record<string, string[]> = {};
-        Object.entries(userData.visitedAttractions).forEach(([deptId, ids]) => {
-            const validIds = (attractionsByDept[deptId] || []).map(a => a.id);
-            cleaned[deptId] = ids.filter(id => validIds.includes(id));
+
+        Object.entries(userData?.visitedAttractions || {}).forEach(([deptId, ids]) => {
+            // Get all valid attraction IDs for this department
+            const validAttractions = attractionsByDept[deptId] || [];
+
+            // Obtener todos los IDs válidos (tanto el id del documento como cualquier ID alternativo)
+            const validIds = validAttractions.map(a => a.id).filter(id => id);
+
+            // Filtrar IDs inválidos
+            cleaned[deptId] = ids.filter(id =>
+                validIds.includes(id)
+            ).filter((id, index, array) => array.indexOf(id) === index); // Remove duplicates
         });
+
         return cleaned;
-    }, [userData.visitedAttractions, attractionsByDept]);
+    }, [userData.visitedAttractions, attractionsByDept, isLoadingData]);
 
     // Update Firebase when local data changes
     const updateFirebase = async (newData: Partial<UserData>) => {

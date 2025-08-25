@@ -1,6 +1,7 @@
 // src/pages/LoginPage.tsx
 import React from 'react';
 import ColombiaMapLogin from '../components/ColombiaMapLogin';
+import Button from '../components/UI/Button';
 
 interface LoginPageProps {
     login: () => void;
@@ -16,13 +17,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ login }) => {
                 <p className="text-gray-600 mb-8 max-w-sm text-center">
                     Registra los departamentos que has visitado y lleva un control de los atractivos turísticos que has explorado en Colombia.
                 </p>
-                <button
+                <Button
                     onClick={login}
-                    className="flex items-center gap-3 bg-white px-6 py-3 rounded-lg shadow-md hover:shadow-lg transition-shadow border font-semibold text-gray-700"
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                    <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google logo" className="h-6" />
-                    Iniciar Sesión con Google
-                </button>
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12.545 10.239v3.821h5.445c-0.712 2.315-2.647 3.972-5.445 3.972-3.332 0-6.033-2.701-6.033-6.032s2.701-6.032 6.033-6.032c1.498 0 2.866 0.549 3.921 1.453l2.814-2.814c-1.784-1.664-4.153-2.675-6.735-2.675-5.522 0-10 4.477-10 10s4.478 10 10 10c8.396 0 10-7.496 10-9.999 0-1.003-0.102-1.708-0.227-2.451h-9.773z" />
+                    </svg>
+                    Continuar con Google
+                </Button>
             </div>
         </div>
     );

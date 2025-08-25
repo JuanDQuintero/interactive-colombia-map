@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { type Attraction } from '../data/attractionsData';
 import { useAttractionsData } from '../hooks/useAttractionsData';
+import type { Attraction } from '../interfaces/attraction';
+import ProposeAttractionForm from './ProposeAttractionForm';
 import Loader from './UI/Loader';
 
 interface DepartmentModalProps {
@@ -20,6 +21,7 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({
 }) => {
     const [selectedAttractions, setSelectedAttractions] = useState<string[]>(visitedInDept);
     const [loadingData, setLoadingData] = useState(false);
+    const [showProposalForm, setShowProposalForm] = useState(false);
     const { data: attractionsByDept, loading } = useAttractionsData();
 
     // Solo los atractivos del departamento actual
@@ -105,6 +107,12 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({
                 ) : (
                     <p className="text-gray-500 dark:text-gray-400 text-center py-8">No hay atractivos registrados para este departamento.</p>
                 )}
+                <button
+                    onClick={() => setShowProposalForm(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
+                >
+                    Proponer lugar
+                </button>
                 <div className="mt-6 flex justify-end gap-3">
                     <button
                         onClick={onClose}
@@ -119,6 +127,12 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({
                         Guardar selección
                     </button>
                 </div>
+                {showProposalForm && (
+                    <ProposeAttractionForm
+                        departmentId={departmentId}
+                        onClose={() => setShowProposalForm(false)}
+                    />
+                )}
             </div>
         </div>
     );

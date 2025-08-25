@@ -1,7 +1,7 @@
 import { collection, getDocs } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
-import type { Attraction } from '../data/attractionsData';
 import { db } from '../firebase';
+import type { Attraction } from '../interfaces/attraction';
 
 export const useAttractionsData = () => {
     const [data, setData] = useState<Record<string, Attraction[]>>({});
@@ -16,20 +16,28 @@ export const useAttractionsData = () => {
             try {
                 const attractionsSnap = await getDocs(collection(db, 'attractions'));
                 const result: Record<string, Attraction[]> = {};
+
                 attractionsSnap.docs.forEach(doc => {
-                    const attraction = doc.data() as Attraction & { regionId: string };
+                    const attraction = {
+                        id: doc.id,
+                        ...doc.data()
+                    } as Attraction & { regionId: string };
+
                     if (!result[attraction.regionId]) {
                         result[attraction.regionId] = [];
                     }
                     result[attraction.regionId].push(attraction);
                 });
+
                 if (isMounted) setData(result);
+
             } catch (err) {
                 if (isMounted) setError(err as Error);
             } finally {
                 if (isMounted) setLoading(false);
             }
         }
+
         fetchData();
         return () => { isMounted = false; };
     }, []);
