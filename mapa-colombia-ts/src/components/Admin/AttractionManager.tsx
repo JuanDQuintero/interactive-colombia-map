@@ -201,6 +201,7 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
                     attraction={selectedAttraction}
                     onClose={() => setSelectedAttraction(null)}
                     onEdit={() => setViewMode('edit')}
+                    onDelete={() => handleDeleteClick(selectedAttraction.firestoreId, selectedAttraction.name)}
                 />
             )}
 
