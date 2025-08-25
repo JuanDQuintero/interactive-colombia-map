@@ -5,7 +5,6 @@ import ProposalManager from '../components/Admin/PropolsalManager';
 
 const AdminPage: React.FC<{ user: User }> = ({ user }) => {
     const [activeTab, setActiveTab] = useState<'proposals' | 'attractions'>('proposals');
-    const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
     const [refreshKey, setRefreshKey] = useState(0);
 
     const handleUpdate = () => {
@@ -43,30 +42,11 @@ const AdminPage: React.FC<{ user: User }> = ({ user }) => {
                 </header>
 
                 {activeTab === 'proposals' ? (
-                    <>
-                        <div className="flex items-center gap-4 mb-6">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Filtrar por estado:
-                            </label>
-                            <select
-                                value={filter}
-                                onChange={(e) => setFilter(e.target.value as 'all' | 'pending' | 'approved' | 'rejected')}
-                                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            >
-                                <option value="all">Todas</option>
-                                <option value="pending">Pendientes</option>
-                                <option value="approved">Aprobadas</option>
-                                <option value="rejected">Rechazadas</option>
-                            </select>
-                        </div>
-
-                        <ProposalManager
-                            user={user}
-                            filter={filter}
-                            onUpdateProposal={handleUpdate}
-                            key={refreshKey}
-                        />
-                    </>
+                    <ProposalManager
+                        user={user}
+                        onUpdateProposal={handleUpdate}
+                        key={refreshKey}
+                    />
                 ) : (
                     <AttractionsManager
                         user={user}

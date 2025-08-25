@@ -27,7 +27,6 @@ const AttractionEditModal: React.FC<AttractionEditModalProps> = ({ attraction, u
         setLoading(true);
 
         try {
-            // Actualizar en Firebase
             await updateDoc(doc(db, 'attractions', attraction.id), {
                 ...formData,
                 updatedBy: user.uid,

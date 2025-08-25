@@ -5,25 +5,25 @@ import { db } from '../../firebase';
 import type { AttractionProposal } from '../../interfaces/attraction';
 import ConfirmationModal from '../UI/ConfirmationModal';
 import Pagination from '../UI/Pagination';
+import PropolsalFilter from './PropolsalFilter';
 import ProposalCard from './ProposalCard';
 import ProposalModal from './ProposalModal';
 
 interface ProposalsManagerProps {
     user: User;
-    filter: string;
     onUpdateProposal: () => void;
 }
 
-const ProposalsManager: React.FC<ProposalsManagerProps> = ({ user, filter, onUpdateProposal }) => {
+const ProposalsManager: React.FC<ProposalsManagerProps> = ({ user, onUpdateProposal }) => {
     const [proposals, setProposals] = useState<AttractionProposal[]>([]);
     const [loading, setLoading] = useState(true);
+    const [filterPropolsals, setFilterPropolsas] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+
     const [selectedProposal, setSelectedProposal] = useState<AttractionProposal | null>(null);
 
-    // Estados para paginación
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(12);
 
-    // Estados para confirmación
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [proposalToDelete, setProposalToDelete] = useState<string | null>(null);
 
@@ -31,12 +31,12 @@ const ProposalsManager: React.FC<ProposalsManagerProps> = ({ user, filter, onUpd
         setLoading(true);
         try {
             let q;
-            if (filter === 'all') {
+            if (filterPropolsals === 'all') {
                 q = query(collection(db, 'attractionProposals'), orderBy('createdAt', 'desc'));
             } else {
                 q = query(
                     collection(db, 'attractionProposals'),
-                    where('status', '==', filter),
+                    where('status', '==', filterPropolsals),
                     orderBy('createdAt', 'desc')
                 );
             }
@@ -58,8 +58,8 @@ const ProposalsManager: React.FC<ProposalsManagerProps> = ({ user, filter, onUpd
 
     useEffect(() => {
         fetchProposals();
-        setCurrentPage(1); // Reset to first page when filter changes
-    }, [filter]);
+        setCurrentPage(1);
+    }, [filterPropolsals]);
 
     // Calcular propuestas paginadas
     const indexOfLastItem = currentPage * itemsPerPage;
@@ -94,10 +94,17 @@ const ProposalsManager: React.FC<ProposalsManagerProps> = ({ user, filter, onUpd
 
     return (
         <>
+            <div className='mb-4'>
+                <PropolsalFilter
+                    selectedStatePropolsal={filterPropolsals}
+                    onStatePropolsalChange={setFilterPropolsas}
+                />
+            </div>
+
             {proposals.length === 0 ? (
                 <div className="bg-white dark:bg-gray-700 p-8 rounded-lg shadow-md text-center">
                     <p className="text-gray-600 dark:text-gray-300">
-                        No hay propuestas {filter !== 'all' ? `en estado ${filter}` : ''}
+                        No hay propuestas {filterPropolsals !== 'all' ? `en estado ${filterPropolsals}` : ''}
                     </p>
                 </div>
             ) : (

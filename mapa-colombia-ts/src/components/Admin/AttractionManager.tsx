@@ -64,7 +64,7 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
             const filtered = allAttractions.filter(attr => attr.regionId === selectedDepartment);
             setAttractions(filtered);
         }
-        setCurrentPage(1); // Reset to first page cuando cambie el filtro
+        setCurrentPage(1);
     }, [selectedDepartment, allAttractions]);
 
     // Calcular atracciones paginadas
@@ -82,18 +82,15 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
         if (!attractionToDelete) return;
 
         try {
-            // 1. Actualizar el estado localmente
             const updatedAllAttractions = allAttractions.filter(attr => attr.firestoreId !== attractionToDelete.firestoreId);
             const updatedFilteredAttractions = attractions.filter(attr => attr.firestoreId !== attractionToDelete.firestoreId);
 
             setAllAttractions(updatedAllAttractions);
             setAttractions(updatedFilteredAttractions);
-            setLoading(true); // Mostrar loading mientras se sincroniza con Firebase
+            setLoading(true);
 
-            //Eliminar de Firebase usando el firestoreId
             await deleteDoc(doc(db, 'attractions', attractionToDelete.firestoreId));
 
-            //Crear notificación
             await addDoc(collection(db, 'notifications'), {
                 userId: 'admin',
                 type: 'attraction_deleted',
@@ -107,7 +104,6 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
             console.error("Error deleting attraction:", error);
             alert("Error al eliminar la atracción. Por favor intenta nuevamente.");
 
-            // Revertir cambios locales si falla
             fetchAllAttractions();
         } finally {
             setLoading(false);
@@ -127,7 +123,6 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
     };
 
     const handleUpdateAttraction = (updatedAttraction: FirestoreAttraction) => {
-        // Actualizar la lista local con la atracción editada
         const updatedAttractions = allAttractions.map(attr =>
             attr.firestoreId === updatedAttraction.firestoreId ? updatedAttraction : attr
         );
