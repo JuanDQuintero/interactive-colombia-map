@@ -1,6 +1,7 @@
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react';
 import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid';
 import { departmentsData } from '../../data/colombiaMapData';
+import { getDepartmentDisplayName } from '../../utils/getDepartmentName';
 
 interface DepartmentFilterProps {
     selectedDepartment: string;
@@ -26,7 +27,10 @@ const DepartmentFilter: React.FC<DepartmentFilterProps> = ({ selectedDepartment,
                     <ListboxButton className="grid w-full cursor-default grid-cols-1 rounded-lg bg-white dark:bg-gray-700 py-2 pl-3 pr-2 text-left text-gray-900 dark:text-gray-100 outline outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500 dark:focus-visible:outline-blue-400 transition-colors">
                         <span className="col-start-1 row-start-1 flex items-center gap-3 pr-6">
                             <span className="block truncate">
-                                {departmentOptions.find(opt => opt.value === selectedDepartment)?.label}
+                                {selectedDepartment === 'all'
+                                    ? 'Todos los departamentos'
+                                    : getDepartmentDisplayName(selectedDepartment)
+                                }
                             </span>
                         </span>
                         <ChevronUpDownIcon
