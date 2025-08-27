@@ -22,11 +22,6 @@ const categories = [
 
 // Tipos para las opciones de imagen
 type ImageSource = 'url' | 'upload';
-type ImageData = {
-    url: string;
-    base64?: string;
-    file?: File;
-};
 
 const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmentId, onClose }) => {
     const [formData, setFormData] = useState({
@@ -35,7 +30,8 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
         category: categories[0]
     });
     const [imageSource, setImageSource] = useState<ImageSource>('url');
-    const [imageData, setImageData] = useState<ImageData>({ url: '' });
+    const [imageUrl, setImageUrl] = useState('');
+    const [imageBase64, setImageBase64] = useState<string>('');
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [imageError, setImageError] = useState<string | null>(null);
@@ -54,6 +50,7 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
         }
 
         setLoading(true);
+        setImageError(null);
 
         try {
             // Validar que tengamos una imagen válida
@@ -63,32 +60,30 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                 return;
             }
 
-            // Preparar datos de la imagen
-            let imageToSave = '';
-            if (imageSource === 'url') {
-                imageToSave = imageData.url;
-            } else if (imageData.base64) {
-                imageToSave = imageData.base64;
-            }
+            // Preparar datos para Firestore
+            const imageToSave = imageSource === 'url' ? imageUrl : imageBase64;
 
-            // Guardar propuesta en Firestore
-            const proposalRef = await addDoc(collection(db, 'attractionProposals'), {
-                name: formData.name,
-                description: formData.description,
+            const proposalData = {
+                name: formData.name.trim(),
+                description: formData.description.trim(),
                 image: imageToSave,
-                imageSource: imageSource, // Guardamos la fuente para saber cómo procesarla después
+                imageSource: imageSource,
                 category: formData.category,
-                departmentId,
+                departmentId: departmentId,
                 status: 'pending',
                 createdAt: new Date(),
-                userId: currentUser?.uid || "anonymous",
-                userName: currentUser?.displayName || "Usuario anónimo"
-            });
+                userId: currentUser.uid,
+                userName: currentUser.displayName || "Usuario anónimo",
+                userEmail: currentUser.email
+            };
+
+            // Guardar propuesta en Firestore
+            const proposalRef = await addDoc(collection(db, 'attractionProposals'), proposalData);
 
             // Crear notificación para administradores
             await addDoc(collection(db, 'notifications'), {
                 type: 'new_proposal',
-                message: `Nueva propuesta: ${formData.name} por ${currentUser?.displayName || "Usuario anónimo"}`,
+                message: `Nueva propuesta: ${formData.name} por ${currentUser.displayName || "Usuario anónimo"}`,
                 proposalId: proposalRef.id,
                 proposalName: formData.name,
                 userId: 'admin',
@@ -97,9 +92,17 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
             });
 
             setSuccess(true);
-        } catch (error: unknown) {
+
+        } catch (error: any) {
             console.error("Error al enviar la propuesta:", error);
-            alert("Ocurrió un error al enviar la propuesta. Por favor intenta nuevamente.");
+
+            if (error.code === 'invalid-argument') {
+                setImageError("Los datos de la imagen no son válidos");
+            } else if (error.message.includes('size') || error.message.includes('large')) {
+                setImageError("La imagen es demasiado grande. Intenta con una más pequeña");
+            } else {
+                alert("Ocurrió un error al enviar la propuesta. Por favor intenta nuevamente.");
+            }
         } finally {
             setLoading(false);
         }
@@ -112,7 +115,7 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
 
     const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const url = e.target.value;
-        setImageData({ url });
+        setImageUrl(url);
         setImageError(null);
     };
 
@@ -120,29 +123,29 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
         const file = e.target.files?.[0];
         if (!file) return;
 
+        setImageError(null);
+
         // Validar tipo de archivo
         if (!file.type.startsWith('image/')) {
             setImageError("Por favor selecciona un archivo de imagen válido");
             return;
         }
 
-        // Validar tamaño (máximo 2MB)
-        if (file.size > 2 * 1024 * 1024) {
-            setImageError("La imagen no debe superar los 2MB");
+        // Validar tamaño (máximo 1MB para Base64)
+        if (file.size > 1 * 1024 * 1024) {
+            setImageError("La imagen no debe superar los 1MB");
             return;
         }
 
-        setImageError(null);
+        // Crear URL local para vista previa
+        const objectUrl = URL.createObjectURL(file);
+        setImageUrl(objectUrl);
 
-        // Convertir a Base64
+        // Convertir a Base64 para enviar a Firestore
         const reader = new FileReader();
         reader.onload = (event) => {
-            if (event.target?.result) {
-                setImageData({
-                    url: URL.createObjectURL(file), // Para la vista previa
-                    base64: event.target.result as string,
-                    file: file
-                });
+            if (event.target?.result && typeof event.target.result === 'string') {
+                setImageBase64(event.target.result);
             }
         };
         reader.onerror = () => {
@@ -166,18 +169,19 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
 
     const isValidImage = (): boolean => {
         if (imageSource === 'url') {
-            return imageData.url !== '' && isValidUrl(imageData.url);
+            return imageUrl !== '' && isValidUrl(imageUrl);
         } else {
-            return imageData.base64 !== undefined && imageData.base64 !== '';
+            return imageBase64 !== '' && imageUrl !== '';
         }
     };
 
     const handleImageError = () => {
-        setImageError("No se pudo cargar la imagen");
+        setImageError("No se pudo cargar la imagen. Verifica que la URL sea correcta");
     };
 
     const clearImage = () => {
-        setImageData({ url: '' });
+        setImageUrl('');
+        setImageBase64('');
         setImageError(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -186,7 +190,8 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
 
     const switchImageSource = (source: ImageSource) => {
         setImageSource(source);
-        setImageData({ url: '' });
+        setImageUrl('');
+        setImageBase64('');
         setImageError(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -194,13 +199,10 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
     };
 
     const disabledSubmit = useMemo(() => {
-        return !formData.name ||
-            !formData.description ||
+        return !formData.name.trim() ||
+            !formData.description.trim() ||
             !isValidImage();
-    }, [formData.name, formData.description, imageData, imageSource]);
-
-    // Obtener la URL para la vista previa
-    const previewUrl = imageSource === 'url' ? imageData.url : imageData.url;
+    }, [formData.name, formData.description, imageUrl, imageBase64, imageSource]);
 
     return (
         <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4" onClick={onClose}>
@@ -326,11 +328,11 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                                         type="url"
                                         className="block w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-colors"
                                         placeholder="https://ejemplo.com/imagen.jpg"
-                                        value={imageData.url}
+                                        value={imageUrl}
                                         onChange={handleImageUrlChange}
                                         required
                                     />
-                                    {imageData.url && !isValidUrl(imageData.url) && (
+                                    {imageUrl && !isValidUrl(imageUrl) && (
                                         <p className="text-sm text-red-600 dark:text-red-400">
                                             Por favor ingresa una URL válida
                                         </p>
@@ -346,20 +348,21 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                                         onChange={handleFileUpload}
                                     />
                                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        Formatos aceptados: JPG, PNG, WEBP. Tamaño máximo: 2MB
+                                        Formatos aceptados: JPG, PNG, WEBP. Tamaño máximo: 1MB
                                     </p>
                                 </div>
                             )}
                         </div>
 
-                        {previewUrl && !imageError && (
+                        {/* Vista previa de imagen */}
+                        {imageUrl && !imageError && (
                             <div className="mt-2">
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     Vista previa
                                 </label>
-                                <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-200 dark:bg-gray-600">
+                                <div className="relative w-full h-48 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                                     <img
-                                        src={previewUrl}
+                                        src={imageUrl}
                                         alt="Vista previa"
                                         className="w-full h-full object-cover"
                                         onError={handleImageError}
@@ -367,14 +370,19 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                                     <button
                                         type="button"
                                         onClick={clearImage}
-                                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
+                                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
                                         aria-label="Eliminar imagen"
                                     >
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                         </svg>
                                     </button>
                                 </div>
+                                {imageSource === 'upload' && imageBase64 && (
+                                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                        ✅ Imagen lista para enviar ({Math.round(imageBase64.length / 1024)}KB)
+                                    </p>
+                                )}
                             </div>
                         )}
 
@@ -392,7 +400,7 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                             </label>
                             <Listbox value={formData.category} onChange={handleCategoryChange}>
                                 <div className="relative mt-1">
-                                    <ListboxButton className="grid w-full cursor-default grid-cols-1 rounded-lg bg-white dark:bg-gray-700 py-2 pl-3 pr-2 text-left text-gray-900 dark:text-gray-100 outline outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500 dark:focus-visible:outline-blue-400 transition-colors">
+                                    <ListboxButton className="grid w-full cursor-default grid-cols-1 rounded-lg bg-white dark:bg-gray-700 py-2 pl-3 pr-2 text-left text-gray-900 dark:text-gray-100 outline outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500 dark:focus:visible:outline-blue-400 transition-colors">
                                         <span className="col-start-1 row-start-1 flex items-center gap-3 pr-6">
                                             <span className="block truncate">{formData.category}</span>
                                         </span>
