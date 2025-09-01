@@ -1,7 +1,7 @@
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react';
 import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid';
-import { departmentsData } from '../../data/colombiaMapData';
-import { getDepartmentDisplayName } from '../../utils/getDepartmentName';
+import { departmentsData } from '../../../data/colombiaMapData';
+import { getDepartmentDisplayName } from '../../../utils/getDepartmentName';
 
 interface DepartmentFilterProps {
     selectedDepartment: string;

@@ -1,6 +1,6 @@
-import type { AttractionProposal } from '../../interfaces/attraction';
-import { getDepartmentDisplayName } from '../../utils/getDepartmentName';
-import Button from '../UI/Button';
+import type { AttractionProposal } from '../../../interfaces/attraction';
+import { getDepartmentDisplayName } from '../../../utils/getDepartmentName';
+import Button from '../../UI/Button';
 
 interface ProposalCardProps {
     proposal: AttractionProposal;
@@ -9,7 +9,7 @@ interface ProposalCardProps {
 
 const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onSelect }) => {
     return (
-        <div className={`bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden border-l-4 ${proposal.status === 'approved'
+        <div onClick={() => onSelect(proposal)} className={`bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden border-l-4  cursor-pointer hover:shadow-lg transition-shadow ${proposal.status === 'approved'
             ? 'border-green-500'
             : proposal.status === 'rejected'
                 ? 'border-red-500'
@@ -54,7 +54,7 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onSelect }) => {
                 <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-4">
                     {proposal.description}
                 </p>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-end items-center">
                     <Button
                         variant='ghost'
                         onClick={() => onSelect(proposal)}
@@ -62,30 +62,6 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onSelect }) => {
                     >
                         Ver detalles
                     </Button>
-                    {proposal.status === 'pending' && (
-                        <div className="flex gap-2">
-                            <Button
-                                onClick={() => {
-                                    // Esta función se manejará en el modal
-                                    onSelect(proposal);
-                                }}
-                                className="text-sm"
-                                variant='approved'
-                            >
-                                Aprobar
-                            </Button>
-                            <Button
-                                onClick={() => {
-                                    // Esta función se manejará en el modal
-                                    onSelect(proposal);
-                                }}
-                                variant='danger'
-                                className="text-sm"
-                            >
-                                Rechazar
-                            </Button>
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

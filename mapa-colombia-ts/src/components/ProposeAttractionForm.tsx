@@ -1,8 +1,7 @@
-import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react';
-import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid';
 import { getAuth } from 'firebase/auth';
 import { addDoc, collection } from 'firebase/firestore';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Select from 'react-select';
 import { db } from '../firebase';
 import Button from './UI/Button';
 import Loader from './UI/Loader';
@@ -12,33 +11,164 @@ interface ProposeAttractionFormProps {
     onClose: () => void;
 }
 
-const categories = [
-    "Pueblos y Cultura",
-    "Aventura",
-    "Naturaleza y Ecoturismo",
-    "Familiar",
-    "Otros"
-];
-
 // Tipos para las opciones de imagen
 type ImageSource = 'url' | 'upload';
 
+// Definir tipos para React Select
+interface CategoryOption {
+    value: string;
+    label: string;
+}
+
+const categories: CategoryOption[] = [
+    { value: 'pueblos_cultura', label: 'Pueblos y Cultura' },
+    { value: 'aventura', label: 'Aventura' },
+    { value: 'naturaleza_ecoturismo', label: 'Naturaleza y Ecoturismo' },
+    { value: 'familiar', label: 'Familiar' },
+    { value: 'otros', label: 'Otros' }
+];
+
+// Estilos para React Select (modo claro)
+const customStyles = {
+    menu: (provided: any) => ({
+        ...provided,
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        border: '1px solid #eaeaea',
+        padding: '10px 0',
+        background: 'white',
+    }),
+    option: (provided: any, state: any) => ({
+        ...provided,
+        color: state.isSelected ? 'white' : state.data.color || '#333',
+        padding: '12px 20px',
+        background: state.isSelected
+            ? state.data.color || '#0065FF'
+            : state.isFocused
+                ? (state.data.color ? `${state.data.color}20` : '#f0f7ff')
+                : 'white',
+        '&:active': {
+            background: state.data.color || '#0065FF',
+            color: 'white'
+        }
+    }),
+    control: (provided: any, state: any) => ({
+        ...provided,
+        borderRadius: '8px',
+        borderColor: state.isFocused ? '#0065FF' : '#eaeaea',
+        boxShadow: state.isFocused ? '0 0 0 2px rgba(0, 101, 255, 0.2)' : 'none',
+        padding: '4px',
+        '&:hover': {
+            borderColor: state.isFocused ? '#0065FF' : '#ccc'
+        }
+    }),
+    singleValue: (provided: any, state: any) => ({
+        ...provided,
+        color: state.data.color || '#333',
+        fontWeight: '500'
+    })
+};
+
+// Estilos para el tema oscuro
+const darkStyles = {
+    menu: (provided: any) => ({
+        ...provided,
+        borderRadius: '8px',
+        background: '#2D3748',
+        color: 'white',
+        border: '1px solid #4A5568',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+        padding: '10px 0',
+    }),
+    option: (provided: any, state: any) => ({
+        ...provided,
+        color: state.isSelected ? 'white' : 'white',
+        padding: '12px 20px',
+        background: state.isSelected
+            ? state.data.color || '#0065FF'
+            : state.isFocused
+                ? (state.data.color ? `${state.data.color}40` : '#4A5568')
+                : '#2D3748',
+        '&:active': {
+            background: state.data.color || '#0065FF'
+        }
+    }),
+    control: (provided: any, state: any) => ({
+        ...provided,
+        borderRadius: '8px',
+        background: '#2D3748',
+        border: '2px solid #4A5568',
+        color: 'white',
+        boxShadow: state.isFocused ? '0 0 0 2px rgba(66, 153, 225, 0.5)' : 'none',
+        '&:hover': {
+            borderColor: state.isFocused ? '#0065FF' : '#4A5568'
+        }
+    }),
+    singleValue: (provided: any, state: any) => ({
+        ...provided,
+        color: state.data.color || 'white',
+        fontWeight: '500'
+    }),
+    input: (provided: any) => ({
+        ...provided,
+        color: 'white'
+    }),
+    placeholder: (provided: any) => ({
+        ...provided,
+        color: '#A0AEC0'
+    }),
+    indicatorSeparator: (provided: any) => ({
+        ...provided,
+        backgroundColor: '#4A5568'
+    }),
+    dropdownIndicator: (provided: any) => ({
+        ...provided,
+        color: '#A0AEC0',
+        '&:hover': {
+            color: 'white'
+        }
+    })
+};
+
 const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmentId, onClose }) => {
-    const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        category: categories[0]
-    });
+    const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState<CategoryOption>(categories[0]);
     const [imageSource, setImageSource] = useState<ImageSource>('url');
     const [imageUrl, setImageUrl] = useState('');
     const [imageBase64, setImageBase64] = useState<string>('');
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [imageError, setImageError] = useState<string | null>(null);
+    const [isDarkMode, setIsDarkMode] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const auth = getAuth();
     const currentUser = auth.currentUser;
+
+    // Detectar modo oscuro
+    useEffect(() => {
+        const checkDarkMode = () => {
+            const isDark = document.documentElement.classList.contains('dark');
+            setIsDarkMode(isDark);
+        };
+
+        // Verificar inicialmente
+        checkDarkMode();
+
+        // Observar cambios en el tema
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'class') {
+                    checkDarkMode();
+                }
+            });
+        });
+
+        observer.observe(document.documentElement, { attributes: true });
+
+        return () => observer.disconnect();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -64,11 +194,12 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
             const imageToSave = imageSource === 'url' ? imageUrl : imageBase64;
 
             const proposalData = {
-                name: formData.name.trim(),
-                description: formData.description.trim(),
+                name: name.trim(),
+                description: description.trim(),
                 image: imageToSave,
                 imageSource: imageSource,
-                category: formData.category,
+                category: selectedCategory.label,
+                categoryValue: selectedCategory.value,
                 departmentId: departmentId,
                 status: 'pending',
                 createdAt: new Date(),
@@ -83,9 +214,9 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
             // Crear notificación para administradores
             await addDoc(collection(db, 'notifications'), {
                 type: 'new_proposal',
-                message: `Nueva propuesta: ${formData.name} por ${currentUser.displayName || "Usuario anónimo"}`,
+                message: `Nueva propuesta: ${name} por ${currentUser.displayName || "Usuario anónimo"}`,
                 proposalId: proposalRef.id,
-                proposalName: formData.name,
+                proposalName: name,
                 userId: 'admin',
                 read: false,
                 createdAt: new Date()
@@ -93,6 +224,7 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
 
             setSuccess(true);
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error("Error al enviar la propuesta:", error);
 
@@ -108,9 +240,18 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
         }
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setName(e.target.value);
+    };
+
+    const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setDescription(e.target.value);
+    };
+
+    const handleCategoryChange = (selectedOption: CategoryOption | null) => {
+        if (selectedOption) {
+            setSelectedCategory(selectedOption);
+        }
     };
 
     const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,10 +295,6 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
         reader.readAsDataURL(file);
     };
 
-    const handleCategoryChange = (category: string) => {
-        setFormData(prev => ({ ...prev, category }));
-    };
-
     const isValidUrl = (url: string): boolean => {
         try {
             new URL(url);
@@ -199,10 +336,14 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
     };
 
     const disabledSubmit = useMemo(() => {
-        return !formData.name.trim() ||
-            !formData.description.trim() ||
-            !isValidImage();
-    }, [formData.name, formData.description, imageUrl, imageBase64, imageSource]);
+        return !name.trim() ||
+            !description.trim() ||
+            !isValidImage() ||
+            !selectedCategory;
+    }, [name, description, imageUrl, imageBase64, imageSource, selectedCategory]);
+
+    // Seleccionar estilos según el modo
+    const selectStyles = isDarkMode ? darkStyles : customStyles;
 
     return (
         <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4" onClick={onClose}>
@@ -250,7 +391,7 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                                         Tu propuesta será revisada por nuestro equipo. Te notificaremos cuando sea aprobada.
                                     </p>
                                 </div>
-                                <div className="mt-4">
+                                <div className="flex justify-end mt-4">
                                     <button
                                         type="button"
                                         className="px-4 py-2 bg-green-600 dark:bg-green-700 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
@@ -273,12 +414,11 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                             </label>
                             <input
                                 id="name"
-                                name="name"
                                 type="text"
                                 className="block w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-colors"
                                 placeholder="Ej: Cascada La Chorrera"
-                                value={formData.name}
-                                onChange={handleChange}
+                                value={name}
+                                onChange={handleNameChange}
                                 required
                             />
                         </div>
@@ -289,12 +429,11 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                             </label>
                             <textarea
                                 id="description"
-                                name="description"
                                 rows={4}
                                 className="block w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 transition-colors"
                                 placeholder="Describe el atractivo turístico..."
-                                value={formData.description}
-                                onChange={handleChange}
+                                value={description}
+                                onChange={handleDescriptionChange}
                                 required
                             />
                         </div>
@@ -303,8 +442,6 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Imagen del atractivo*
                             </label>
-
-                            {/* Selector de fuente de imagen */}
                             <div className="flex space-x-2 mb-3">
                                 <button
                                     type="button"
@@ -380,7 +517,7 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                                 </div>
                                 {imageSource === 'upload' && imageBase64 && (
                                     <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                                        ✅ Imagen lista para enviar ({Math.round(imageBase64.length / 1024)}KB)
+                                        Imagen lista para enviar ({Math.round(imageBase64.length / 1024)}KB)
                                     </p>
                                 )}
                             </div>
@@ -398,42 +535,16 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Categoría*
                             </label>
-                            <Listbox value={formData.category} onChange={handleCategoryChange}>
-                                <div className="relative mt-1">
-                                    <ListboxButton className="grid w-full cursor-default grid-cols-1 rounded-lg bg-white dark:bg-gray-700 py-2 pl-3 pr-2 text-left text-gray-900 dark:text-gray-100 outline outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500 dark:focus:visible:outline-blue-400 transition-colors">
-                                        <span className="col-start-1 row-start-1 flex items-center gap-3 pr-6">
-                                            <span className="block truncate">{formData.category}</span>
-                                        </span>
-                                        <ChevronUpDownIcon
-                                            aria-hidden="true"
-                                            className="col-start-1 row-start-1 size-5 self-center justify-self-end text-gray-500 dark:text-gray-400"
-                                        />
-                                    </ListboxButton>
-
-                                    <ListboxOptions
-                                        transition
-                                        className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-white dark:bg-gray-700 py-1 text-base shadow-lg outline outline-1 outline-black/5 dark:outline-gray-600 data-[closed]:data-[leave]:opacity-0 data-[leave]:transition data-[leave]:duration-100 data-[leave]:ease-in sm:text-sm"
-                                    >
-                                        {categories.map((category) => (
-                                            <ListboxOption
-                                                key={category}
-                                                value={category}
-                                                className="group relative cursor-default select-none py-2 pl-3 pr-9 text-gray-900 dark:text-gray-100 data-[focus]:bg-blue-600 data-[focus]:text-white data-[focus]:outline-none"
-                                            >
-                                                <div className="flex items-center">
-                                                    <span className="ml-3 block truncate font-normal group-data-[selected]:font-semibold">
-                                                        {category}
-                                                    </span>
-                                                </div>
-
-                                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600 dark:text-blue-400 group-[:not([data-selected])]:hidden group-data-[focus]:text-white">
-                                                    <CheckIcon aria-hidden="true" className="size-5" />
-                                                </span>
-                                            </ListboxOption>
-                                        ))}
-                                    </ListboxOptions>
-                                </div>
-                            </Listbox>
+                            <Select
+                                options={categories}
+                                value={selectedCategory}
+                                onChange={handleCategoryChange}
+                                styles={selectStyles}
+                                className="react-select-container"
+                                classNamePrefix="react-select"
+                                placeholder="Selecciona una categoría"
+                                isSearchable={false}
+                            />
                         </div>
 
                         <div className="flex justify-end space-x-3 pt-4">

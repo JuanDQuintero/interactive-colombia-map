@@ -1,10 +1,10 @@
 import type { User } from 'firebase/auth';
 import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
-import { db } from '../../firebase';
-import type { FirestoreAttraction } from '../../interfaces/attraction';
-import ConfirmationModal from '../UI/ConfirmationModal';
-import Pagination from '../UI/Pagination';
+import { db } from '../../../firebase';
+import type { FirestoreAttraction } from '../../../interfaces/attraction';
+import ConfirmationModal from '../../UI/ConfirmationModal';
+import Pagination from '../../UI/Pagination';
 import AttractionCard from './AttractionCard';
 import AttractionDetailModal from './AttractionDetailModal';
 import AttractionEditModal from './AttractionEditMotal';
@@ -117,11 +117,6 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
         setViewMode('view');
     };
 
-    const handleEdit = (attraction: FirestoreAttraction) => {
-        setSelectedAttraction(attraction);
-        setViewMode('edit');
-    };
-
     const handleUpdateAttraction = (updatedAttraction: FirestoreAttraction) => {
         const updatedAttractions = allAttractions.map(attr =>
             attr.firestoreId === updatedAttraction.firestoreId ? updatedAttraction : attr
@@ -174,8 +169,6 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
                                 key={attraction.firestoreId}
                                 attraction={attraction}
                                 onViewDetails={handleViewDetails}
-                                onEdit={handleEdit}
-                                onDelete={() => handleDeleteClick(attraction.firestoreId, attraction.name)}
                             />
                         ))}
                     </div>

@@ -1,7 +1,7 @@
 import type { User } from 'firebase/auth';
 import { useState } from 'react';
-import AttractionsManager from '../components/Admin/AttractionManager';
-import ProposalManager from '../components/Admin/PropolsalManager';
+import AttractionsManager from '../components/Admin/AttractionSection/AttractionManager';
+import ProposalManager from '../components/Admin/PropolsalSection/PropolsalManager';
 
 const AdminPage: React.FC<{ user: User }> = ({ user }) => {
     const [activeTab, setActiveTab] = useState<'proposals' | 'attractions'>('proposals');
