@@ -1,9 +1,9 @@
 import { Dialog, DialogBackdrop, DialogPanel } from '@headlessui/react';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useState } from 'react';
-import type { FirestoreAttraction } from '../../interfaces/attraction';
-import { getDepartmentDisplayName } from '../../utils/getDepartmentName';
-import Button from '../UI/Button';
+import type { FirestoreAttraction } from '../../../interfaces/attraction';
+import { getDepartmentDisplayName } from '../../../utils/getDepartmentName';
+import Button from '../../UI/Button';
 
 interface AttractionDetailModalProps {
     attraction: FirestoreAttraction;
@@ -123,19 +123,19 @@ const AttractionDetailModal: React.FC<AttractionDetailModalProps> = ({
                                 Cerrar
                             </Button>
                             <Button
+                                onClick={onEdit}
+                                className="flex items-center gap-2"
+                            >
+                                <PencilIcon className="w-4 h-4" />
+                                Editar
+                            </Button>
+                            <Button
                                 onClick={() => onDelete(attraction.firestoreId, attraction.name)}
                                 variant="danger"
                                 className="flex items-center gap-2"
                             >
                                 <TrashIcon className="w-4 h-4" />
                                 Eliminar
-                            </Button>
-                            <Button
-                                onClick={onEdit}
-                                className="flex items-center gap-2"
-                            >
-                                <PencilIcon className="w-4 h-4" />
-                                Editar
                             </Button>
                         </div>
                     </div>

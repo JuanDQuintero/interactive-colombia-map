@@ -1,10 +1,10 @@
 import type { User } from 'firebase/auth';
 import { addDoc, collection, doc, updateDoc } from 'firebase/firestore';
 import { useState } from 'react';
-import { departmentsData } from '../../data/colombiaMapData';
-import { db } from '../../firebase';
-import type { AttractionProposal } from '../../interfaces/attraction';
-import { getDepartmentDisplayName } from '../../utils/getDepartmentName';
+import { departmentsData } from '../../../data/colombiaMapData';
+import { db } from '../../../firebase';
+import type { AttractionProposal } from '../../../interfaces/attraction';
+import { getDepartmentDisplayName } from '../../../utils/getDepartmentName';
 
 interface ProposalModalProps {
     proposal: AttractionProposal;
@@ -174,6 +174,15 @@ const ProposalModal: React.FC<ProposalModalProps> = ({ proposal, user, onClose, 
                                         {proposal.userName}
                                     </li>
                                 )}
+                                {proposal.userEmail && (
+                                    <li>
+                                        <span className="font-medium text-gray-700 dark:text-gray-200">Email:</span>{' '}
+                                        <a href={`mailto:${proposal.userEmail}`} className="text-blue-600 hover:underline dark:text-blue-400">
+                                            {proposal.userEmail}
+                                        </a>
+                                    </li>
+                                )}
+
                             </ul>
                         </div>
 

@@ -2,9 +2,9 @@ import { Dialog, DialogBackdrop, DialogPanel } from '@headlessui/react';
 import type { User } from 'firebase/auth';
 import { addDoc, collection, doc, updateDoc } from 'firebase/firestore';
 import { useState } from 'react';
-import { db } from '../../firebase';
-import type { FirestoreAttraction } from '../../interfaces/attraction';
-import Button from '../UI/Button';
+import { db } from '../../../firebase';
+import type { FirestoreAttraction } from '../../../interfaces/attraction';
+import Button from '../../UI/Button';
 
 interface AttractionEditModalProps {
     attraction: FirestoreAttraction;

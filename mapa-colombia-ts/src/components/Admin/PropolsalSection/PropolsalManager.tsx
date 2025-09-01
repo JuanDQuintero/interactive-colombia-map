@@ -1,10 +1,10 @@
 import type { User } from 'firebase/auth';
 import { collection, deleteDoc, doc, getDocs, orderBy, query, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
-import { db } from '../../firebase';
-import type { AttractionProposal } from '../../interfaces/attraction';
-import ConfirmationModal from '../UI/ConfirmationModal';
-import Pagination from '../UI/Pagination';
+import { db } from '../../../firebase';
+import type { AttractionProposal } from '../../../interfaces/attraction';
+import ConfirmationModal from '../../UI/ConfirmationModal';
+import Pagination from '../../UI/Pagination';
 import PropolsalFilter from './PropolsalFilter';
 import ProposalCard from './ProposalCard';
 import ProposalModal from './ProposalModal';
@@ -42,12 +42,14 @@ const ProposalsManager: React.FC<ProposalsManagerProps> = ({ user, onUpdatePropo
             }
 
             const querySnapshot = await getDocs(q);
-            const proposalsData: AttractionProposal[] = querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                createdAt: doc.data().createdAt.toDate()
-            } as AttractionProposal));
 
+            const proposalsData: AttractionProposal[] = querySnapshot.docs.map(doc => {
+                return ({
+                    id: doc.id,
+                    ...doc.data(),
+                    createdAt: doc.data().createdAt.toDate()
+                } as AttractionProposal)
+            });
             setProposals(proposalsData);
         } catch (error) {
             console.error("Error fetching proposals:", error);

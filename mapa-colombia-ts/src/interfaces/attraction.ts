@@ -11,6 +11,7 @@ export interface AttractionProposal {
     createdAt: Date;
     userId?: string;
     userName?: string;
+    userEmail?: string;
 }
 
 export interface Attraction {
