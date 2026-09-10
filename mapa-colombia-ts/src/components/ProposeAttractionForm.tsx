@@ -1,7 +1,7 @@
 import { getAuth } from 'firebase/auth';
 import { addDoc, collection } from 'firebase/firestore';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import Select from 'react-select';
+import Select, { type StylesConfig, type CSSObjectWithLabel } from 'react-select';
 import { db } from '../firebase';
 import Button from './UI/Button';
 import Loader from './UI/Loader';
@@ -18,6 +18,7 @@ type ImageSource = 'url' | 'upload';
 interface CategoryOption {
     value: string;
     label: string;
+    color?: string;
 }
 
 const categories: CategoryOption[] = [
@@ -28,9 +29,18 @@ const categories: CategoryOption[] = [
     { value: 'otros', label: 'Otros' }
 ];
 
+const isValidUrl = (url: string): boolean => {
+    try {
+        new URL(url);
+        return true;
+    } catch {
+        return false;
+    }
+};
+
 // Estilos para React Select (modo claro)
-const customStyles = {
-    menu: (provided: any) => ({
+const customStyles: StylesConfig<CategoryOption, false> = {
+    menu: (provided) => ({
         ...provided,
         borderRadius: '8px',
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
@@ -38,7 +48,7 @@ const customStyles = {
         padding: '10px 0',
         background: 'white',
     }),
-    option: (provided: any, state: any) => ({
+    option: (provided, state) => ({
         ...provided,
         color: state.isSelected ? 'white' : state.data.color || '#333',
         padding: '12px 20px',
@@ -52,7 +62,7 @@ const customStyles = {
             color: 'white'
         }
     }),
-    control: (provided: any, state: any) => ({
+    control: (provided, state) => ({
         ...provided,
         borderRadius: '8px',
         borderColor: state.isFocused ? '#0065FF' : '#eaeaea',
@@ -62,7 +72,11 @@ const customStyles = {
             borderColor: state.isFocused ? '#0065FF' : '#ccc'
         }
     }),
-    singleValue: (provided: any, state: any) => ({
+    menuPortal: (provided: CSSObjectWithLabel) => ({
+        ...provided,
+        zIndex: 9999
+    }),
+    singleValue: (provided, state) => ({
         ...provided,
         color: state.data.color || '#333',
         fontWeight: '500'
@@ -70,8 +84,8 @@ const customStyles = {
 };
 
 // Estilos para el tema oscuro
-const darkStyles = {
-    menu: (provided: any) => ({
+const darkStyles: StylesConfig<CategoryOption, false> = {
+    menu: (provided) => ({
         ...provided,
         borderRadius: '8px',
         background: '#2D3748',
@@ -80,7 +94,7 @@ const darkStyles = {
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
         padding: '10px 0',
     }),
-    option: (provided: any, state: any) => ({
+    option: (provided, state) => ({
         ...provided,
         color: state.isSelected ? 'white' : 'white',
         padding: '12px 20px',
@@ -93,7 +107,7 @@ const darkStyles = {
             background: state.data.color || '#0065FF'
         }
     }),
-    control: (provided: any, state: any) => ({
+    control: (provided, state) => ({
         ...provided,
         borderRadius: '8px',
         background: '#2D3748',
@@ -104,30 +118,34 @@ const darkStyles = {
             borderColor: state.isFocused ? '#0065FF' : '#4A5568'
         }
     }),
-    singleValue: (provided: any, state: any) => ({
+    singleValue: (provided, state) => ({
         ...provided,
         color: state.data.color || 'white',
         fontWeight: '500'
     }),
-    input: (provided: any) => ({
+    menuPortal: (provided: CSSObjectWithLabel) => ({
+        ...provided,
+        zIndex: 9999
+    }),
+    input: (provided) => ({
         ...provided,
         color: 'white'
     }),
-    placeholder: (provided: any) => ({
+    placeholder: (provided) => ({
         ...provided,
         color: '#A0AEC0'
     }),
-    indicatorSeparator: (provided: any) => ({
+    indicatorSeparator: (provided) => ({
         ...provided,
         backgroundColor: '#4A5568'
     }),
-    dropdownIndicator: (provided: any) => ({
+    dropdownIndicator: (provided) => ({
         ...provided,
         color: '#A0AEC0',
         '&:hover': {
             color: 'white'
         }
-    })
+    }),
 };
 
 const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmentId, onClose }) => {
@@ -137,11 +155,20 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
     const [imageSource, setImageSource] = useState<ImageSource>('url');
     const [imageUrl, setImageUrl] = useState('');
     const [imageBase64, setImageBase64] = useState<string>('');
+    const [urlWarning, setUrlWarning] = useState(false);
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [imageError, setImageError] = useState<string | null>(null);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const objectUrlRef = useRef<string>('');
+
+    const revokeObjectUrl = () => {
+        if (objectUrlRef.current) {
+            URL.revokeObjectURL(objectUrlRef.current);
+            objectUrlRef.current = '';
+        }
+    };
 
     const auth = getAuth();
     const currentUser = auth.currentUser;
@@ -169,6 +196,23 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
 
         return () => observer.disconnect();
     }, []);
+
+    // Revocar blob URL al desmontar el componente
+    useEffect(() => () => {
+        revokeObjectUrl();
+    }, []);
+
+    // Validación con debounce de la URL de imagen
+    useEffect(() => {
+        if (imageSource !== 'url' || !imageUrl) {
+            setUrlWarning(false);
+            return;
+        }
+        const timer = setTimeout(() => {
+            setUrlWarning(!isValidUrl(imageUrl));
+        }, 600);
+        return () => clearTimeout(timer);
+    }, [imageUrl, imageSource]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -258,6 +302,7 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
         const url = e.target.value;
         setImageUrl(url);
         setImageError(null);
+        setUrlWarning(false);
     };
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -278,8 +323,10 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
             return;
         }
 
-        // Crear URL local para vista previa
+        // Crear URL local para vista previa (liberar la anterior si existía)
+        revokeObjectUrl();
         const objectUrl = URL.createObjectURL(file);
+        objectUrlRef.current = objectUrl;
         setImageUrl(objectUrl);
 
         // Convertir a Base64 para enviar a Firestore
@@ -295,15 +342,6 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
         reader.readAsDataURL(file);
     };
 
-    const isValidUrl = (url: string): boolean => {
-        try {
-            new URL(url);
-            return true;
-        } catch {
-            return false;
-        }
-    };
-
     const isValidImage = (): boolean => {
         if (imageSource === 'url') {
             return imageUrl !== '' && isValidUrl(imageUrl);
@@ -317,19 +355,23 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
     };
 
     const clearImage = () => {
+        revokeObjectUrl();
         setImageUrl('');
         setImageBase64('');
         setImageError(null);
+        setUrlWarning(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
     };
 
     const switchImageSource = (source: ImageSource) => {
+        revokeObjectUrl();
         setImageSource(source);
         setImageUrl('');
         setImageBase64('');
         setImageError(null);
+        setUrlWarning(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -441,6 +483,14 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Imagen del atractivo*
+                                <span className="group relative inline-flex align-middle ml-1">
+                                    <svg className="h-4 w-4 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 cursor-help" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="pointer-events-none absolute bottom-full left-0 mb-2 z-50 hidden w-56 whitespace-normal rounded-md bg-gray-900 px-2.5 py-1.5 text-xs text-white shadow-lg group-hover:block">
+                                        Ejemplo de URL: https://ejemplo.com/imagen.jpg
+                                    </span>
+                                </span>
                             </label>
                             <div className="flex space-x-2 mb-3">
                                 <button
@@ -469,9 +519,9 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                                         onChange={handleImageUrlChange}
                                         required
                                     />
-                                    {imageUrl && !isValidUrl(imageUrl) && (
+                                    {(urlWarning || imageError) && (
                                         <p className="text-sm text-red-600 dark:text-red-400">
-                                            Por favor ingresa una URL válida
+                                            {urlWarning ? 'Por favor ingresa una URL válida' : imageError}
                                         </p>
                                     )}
                                 </div>
@@ -523,7 +573,7 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                             </div>
                         )}
 
-                        {imageError && (
+                        {imageSource !== 'url' && imageError && (
                             <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                                 <p className="text-sm text-red-600 dark:text-red-400">
                                     {imageError}
@@ -544,6 +594,8 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                                 classNamePrefix="react-select"
                                 placeholder="Selecciona una categoría"
                                 isSearchable={false}
+                                menuPortalTarget={document.body}
+                                menuPosition="absolute"
                             />
                         </div>
 

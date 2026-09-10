@@ -1,6 +1,6 @@
 import type { User } from 'firebase/auth';
 import { collection, deleteDoc, doc, getDocs, orderBy, query, where } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { db } from '../../../firebase';
 import type { AttractionProposal } from '../../../interfaces/attraction';
 import ConfirmationModal from '../../UI/ConfirmationModal';
@@ -27,7 +27,14 @@ const ProposalsManager: React.FC<ProposalsManagerProps> = ({ user, onUpdatePropo
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [proposalToDelete, setProposalToDelete] = useState<string | null>(null);
 
-    const fetchProposals = async () => {
+    const isMountedRef = useRef(true);
+
+    useEffect(() => {
+        isMountedRef.current = true;
+        return () => { isMountedRef.current = false; };
+    }, []);
+
+    const fetchProposals = useCallback(async () => {
         setLoading(true);
         try {
             let q;
@@ -43,6 +50,8 @@ const ProposalsManager: React.FC<ProposalsManagerProps> = ({ user, onUpdatePropo
 
             const querySnapshot = await getDocs(q);
 
+            if (!isMountedRef.current) return;
+
             const proposalsData: AttractionProposal[] = querySnapshot.docs.map(doc => {
                 return ({
                     id: doc.id,
@@ -54,14 +63,14 @@ const ProposalsManager: React.FC<ProposalsManagerProps> = ({ user, onUpdatePropo
         } catch (error) {
             console.error("Error fetching proposals:", error);
         } finally {
-            setLoading(false);
+            if (isMountedRef.current) setLoading(false);
         }
-    };
+    }, [filterPropolsals]);
 
     useEffect(() => {
         fetchProposals();
         setCurrentPage(1);
-    }, [filterPropolsals]);
+    }, [fetchProposals]);
 
     // Calcular propuestas paginadas
     const indexOfLastItem = currentPage * itemsPerPage;

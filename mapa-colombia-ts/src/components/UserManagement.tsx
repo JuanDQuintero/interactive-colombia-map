@@ -10,9 +10,12 @@ const UserManagement = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let cancelled = false;
+
         const fetchUsers = async () => {
             try {
                 const querySnapshot = await getDocs(collection(db, 'users'));
+                if (cancelled) return;
                 const usersData: User[] = [];
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
@@ -29,11 +32,12 @@ const UserManagement = () => {
             } catch (error) {
                 console.error("Error fetching users:", error);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
         fetchUsers();
+        return () => { cancelled = true; };
     }, []);
 
     const handleRoleChange = async (userId: string, isAdmin: boolean) => {

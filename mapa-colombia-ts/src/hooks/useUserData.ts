@@ -17,6 +17,8 @@ export const useUserData = (user: User | null) => {
     const { data: attractionsByDept } = useAttractionsData();
 
     useEffect(() => {
+        let cancelled = false;
+
         const fetchData = async () => {
             if (!user) {
                 setUserData({ visitedAttractions: {} });
@@ -29,22 +31,26 @@ export const useUserData = (user: User | null) => {
                 const userDocRef = doc(db, 'users', user.uid);
                 const userDoc = await getDoc(userDocRef);
 
+                if (cancelled) return;
+
                 if (userDoc.exists()) {
                     const data = userDoc.data() as UserData;
                     setUserData(data || { visitedAttractions: {} });
                 } else {
                     await setDoc(userDocRef, { visitedAttractions: {} });
+                    if (cancelled) return;
                     setUserData({ visitedAttractions: {} });
                 }
             } catch (err) {
                 console.error("Error loading user data:", err);
-                setError("Failed to load user data");
+                if (!cancelled) setError("Failed to load user data");
             } finally {
-                setIsLoadingData(false);
+                if (!cancelled) setIsLoadingData(false);
             }
         };
 
         fetchData();
+        return () => { cancelled = true; };
     }, [user]);
 
     const cleanedVisitedAttractions = useMemo(() => {

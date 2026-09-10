@@ -26,12 +26,13 @@ const MainPage: React.FC<MainPageProps> = ({ user, logout, isAdmin }) => {
         saveDepartmentAttractions,
     } = useUserData(user);
 
-    const { completedCount, partialCount, unvisitedCount, totalProgress } = useMapStats(visitedAttractions);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedDept, setSelectedDept] = useState<{ id: string, name: string } | null>(null);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [tooltip, setTooltip] = useState<{ content: string; x: number; y: number } | null>(null);
     const [activeTab, setActiveTab] = useState<'map' | 'admin'>('map');
+
+    const { completedCount, partialCount, unvisitedCount, totalProgress } = useMapStats(visitedAttractions);
     const handleDepartmentClick = (depId: string, depName: string) => {
         setSelectedDept({ id: depId, name: depName });
         setIsModalOpen(true);
@@ -70,6 +71,7 @@ const MainPage: React.FC<MainPageProps> = ({ user, logout, isAdmin }) => {
                     visitedInDept={visitedAttractions[selectedDept.id] || []}
                     onClose={() => setIsModalOpen(false)}
                     saveDepartmentAttractions={saveDepartmentAttractions}
+                    user={user}
                 />
             )}
 
@@ -90,7 +92,11 @@ const MainPage: React.FC<MainPageProps> = ({ user, logout, isAdmin }) => {
 
                         <div className="relative flex items-center gap-4">
                             <div className="flex items-center gap-4">
-                                <Notifications userId={user?.uid} isAdmin={isAdmin} />
+                                <Notifications
+                                    userId={user?.uid}
+                                    isAdmin={isAdmin}
+                                    onOpenProposal={() => setActiveTab('admin')}
+                                />
                             </div>
                             <button
                                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}

@@ -12,7 +12,13 @@ import { useEffect, useRef, useState } from 'react';
 import { db } from '../firebase';
 import type { Notification } from '../interfaces/notifications';
 
-const Notifications = ({ userId, isAdmin = false }: { userId: string; isAdmin?: boolean }) => {
+interface NotificationsProps {
+    userId: string;
+    isAdmin?: boolean;
+    onOpenProposal?: () => void;
+}
+
+const Notifications = ({ userId, isAdmin = false, onOpenProposal }: NotificationsProps) => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
@@ -144,6 +150,15 @@ const Notifications = ({ userId, isAdmin = false }: { userId: string; isAdmin?: 
         }
     };
 
+    const handleNotificationClick = (notification: Notification) => {
+        markAsRead(notification.id);
+        setIsOpen(false);
+        const isProposal = notification.type.includes('proposal');
+        if (isProposal && isAdmin && onOpenProposal) {
+            onOpenProposal();
+        }
+    };
+
     /* -------------------------------------------------
      * Render
      * ------------------------------------------------- */
@@ -221,8 +236,7 @@ const Notifications = ({ userId, isAdmin = false }: { userId: string; isAdmin?: 
                                         }`}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        markAsRead(notification.id);
-                                        setIsOpen(false);
+                                        handleNotificationClick(notification);
                                     }}
                                 >
                                     <div className="flex items-start">

@@ -1,6 +1,6 @@
 import type { User } from 'firebase/auth';
 import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { db } from '../../../firebase';
 import type { FirestoreAttraction } from '../../../interfaces/attraction';
 import ConfirmationModal from '../../UI/ConfirmationModal';
@@ -16,7 +16,6 @@ interface AttractionsManagerProps {
 }
 
 const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateAttraction }) => {
-    const [attractions, setAttractions] = useState<FirestoreAttraction[]>([]);
     const [allAttractions, setAllAttractions] = useState<FirestoreAttraction[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
@@ -29,12 +28,21 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [attractionToDelete, setAttractionToDelete] = useState<{ firestoreId: string; name: string } | null>(null);
 
+    const isMountedRef = useRef(true);
+
+    useEffect(() => {
+        isMountedRef.current = true;
+        return () => { isMountedRef.current = false; };
+    }, []);
+
     // Fetch all attractions
-    const fetchAllAttractions = async () => {
+    const fetchAllAttractions = useCallback(async () => {
         setLoading(true);
         try {
             const q = query(collection(db, 'attractions'), orderBy('createdAt', 'desc'));
             const querySnapshot = await getDocs(q);
+
+            if (!isMountedRef.current) return;
 
             const attractionsData: FirestoreAttraction[] = querySnapshot.docs.map(doc => ({
                 firestoreId: doc.id,
@@ -43,35 +51,35 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
             } as FirestoreAttraction));
 
             setAllAttractions(attractionsData);
-
         } catch (error) {
             console.error("Error fetching attractions:", error);
         } finally {
-            setLoading(false);
+            if (isMountedRef.current) setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchAllAttractions();
-        setCurrentPage(1);
-    }, []);
+    }, [fetchAllAttractions]);
 
     // Filtrar atracciones por departamento
-    useEffect(() => {
-        if (selectedDepartment === 'all') {
-            setAttractions(allAttractions);
-        } else {
-            const filtered = allAttractions.filter(attr => attr.regionId === selectedDepartment);
-            setAttractions(filtered);
-        }
-        setCurrentPage(1);
-    }, [selectedDepartment, allAttractions]);
+    const filteredAttractions = useMemo(() => {
+        if (selectedDepartment === 'all') return allAttractions;
+        return allAttractions.filter(attr => attr.regionId === selectedDepartment);
+    }, [allAttractions, selectedDepartment]);
 
     // Calcular atracciones paginadas
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentAttractions = attractions.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(attractions.length / itemsPerPage);
+    const totalPages = Math.ceil(filteredAttractions.length / itemsPerPage);
+    const currentAttractions = useMemo(() => {
+        const indexOfLastItem = currentPage * itemsPerPage;
+        const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+        return filteredAttractions.slice(indexOfFirstItem, indexOfLastItem);
+    }, [filteredAttractions, currentPage, itemsPerPage]);
+
+    const handleDepartmentChange = (dept: string) => {
+        setSelectedDepartment(dept);
+        setCurrentPage(1);
+    };
 
     const handleDeleteClick = (firestoreId: string, name: string) => {
         setAttractionToDelete({ firestoreId, name });
@@ -80,34 +88,31 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
 
     const handleDeleteConfirm = async () => {
         if (!attractionToDelete) return;
+        const previousAttractions = [...allAttractions];
+        const targetId = attractionToDelete.firestoreId;
+        const targetName = attractionToDelete.name;
+
+        setAllAttractions(prev => prev.filter(attr => attr.firestoreId !== targetId));
+        setIsDeleteModalOpen(false);
 
         try {
-            const updatedAllAttractions = allAttractions.filter(attr => attr.firestoreId !== attractionToDelete.firestoreId);
-            const updatedFilteredAttractions = attractions.filter(attr => attr.firestoreId !== attractionToDelete.firestoreId);
-
-            setAllAttractions(updatedAllAttractions);
-            setAttractions(updatedFilteredAttractions);
-            setLoading(true);
-
-            await deleteDoc(doc(db, 'attractions', attractionToDelete.firestoreId));
+            await deleteDoc(doc(db, 'attractions', targetId));
 
             await addDoc(collection(db, 'notifications'), {
                 userId: 'admin',
                 type: 'attraction_deleted',
-                attractionId: attractionToDelete.firestoreId,
-                attractionName: attractionToDelete.name,
-                message: `${user.displayName || 'Un administrador'} eliminó la atracción "${attractionToDelete.name}"`,
+                attractionId: targetId,
+                attractionName: targetName,
+                message: `${user.displayName || 'Un administrador'} eliminó la atracción "${targetName}"`,
                 read: false,
                 createdAt: new Date()
             });
         } catch (error) {
             console.error("Error deleting attraction:", error);
-            alert("Error al eliminar la atracción. Por favor intenta nuevamente.");
-
-            fetchAllAttractions();
+            alert("Error al eliminar la atracción. Se revertirá el cambio.");
+            // Rollback en caso de fallo
+            setAllAttractions(previousAttractions);
         } finally {
-            setLoading(false);
-            setIsDeleteModalOpen(false);
             setAttractionToDelete(null);
         }
     };
@@ -118,10 +123,9 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
     };
 
     const handleUpdateAttraction = (updatedAttraction: FirestoreAttraction) => {
-        const updatedAttractions = allAttractions.map(attr =>
-            attr.firestoreId === updatedAttraction.firestoreId ? updatedAttraction : attr
+        setAllAttractions(prev =>
+            prev.map(attr => attr.firestoreId === updatedAttraction.firestoreId ? updatedAttraction : attr)
         );
-        setAllAttractions(updatedAttractions);
         onUpdateAttraction();
     };
 
@@ -142,7 +146,7 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
             <div className="flex justify-between items-center mb-4">
                 <DepartmentFilter
                     selectedDepartment={selectedDepartment}
-                    onDepartmentChange={setSelectedDepartment}
+                    onDepartmentChange={handleDepartmentChange}
                 />
                 <button
                     onClick={handleRefresh}
@@ -152,7 +156,7 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
                 </button>
             </div>
 
-            {attractions.length === 0 ? (
+            {filteredAttractions.length === 0 ? (
                 <div className="bg-white dark:bg-gray-700 p-8 rounded-lg shadow-md text-center mt-6">
                     <p className="text-gray-600 dark:text-gray-300">
                         {selectedDepartment === 'all'
@@ -178,7 +182,7 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
                         totalPages={totalPages}
                         onPageChange={setCurrentPage}
                         itemsPerPage={itemsPerPage}
-                        totalItems={attractions.length}
+                        totalItems={filteredAttractions.length}
                         onItemsPerPageChange={setItemsPerPage}
                     />
                 </>

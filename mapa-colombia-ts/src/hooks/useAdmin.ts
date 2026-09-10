@@ -8,11 +8,14 @@ export const useAdmin = (user: User | null) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let cancelled = false;
+
         const checkAdminStatus = async () => {
             setLoading(true);
             try {
                 if (user) {
                     const userDoc = await getDoc(doc(db, 'users', user.uid));
+                    if (cancelled) return;
                     if (userDoc.exists()) {
                         // Verifica tanto isAdmin como roles (por si acaso)
                         const userData = userDoc.data();
@@ -24,6 +27,7 @@ export const useAdmin = (user: User | null) => {
                             email: user.email,
                             displayName: user.displayName
                         });
+                        if (cancelled) return;
                         setIsAdmin(false);
                     }
                 } else {
@@ -31,13 +35,14 @@ export const useAdmin = (user: User | null) => {
                 }
             } catch (error) {
                 console.error("Error checking admin status:", error);
-                setIsAdmin(false);
+                if (!cancelled) setIsAdmin(false);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
         checkAdminStatus();
+        return () => { cancelled = true; };
     }, [user]);
 
     return { isAdmin, loading };
