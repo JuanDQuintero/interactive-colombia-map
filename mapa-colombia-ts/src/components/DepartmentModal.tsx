@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { useAttractionsData } from '../hooks/useAttractionsData';
+import { useAttractionsData } from '../context/AttractionsContext';
 import { useDepartmentRatings } from '../hooks/useDepartmentRatings';
 import type { Attraction } from '../interfaces/attraction';
 import { CATEGORIES_WITHOUT_TODOS, getCategoryGroup, getCategoryLabel, type CategoryId } from '../utils/categories';
@@ -16,8 +16,9 @@ interface DepartmentModalProps {
     departmentName: string;
     visitedInDept: string[];
     onClose: () => void;
-    saveDepartmentAttractions: (departmentId: string, selectedAttractions: string[]) => Promise<void>;
+    saveDepartmentAttractions: (departmentId: string, selectedAttractions: string[]) => void;
     user: User | null;
+    isAdmin?: boolean;
 }
 
 const DepartmentModal: React.FC<DepartmentModalProps> = ({
@@ -27,6 +28,7 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({
     onClose,
     saveDepartmentAttractions,
     user,
+    isAdmin,
 }) => {
     const [selectedAttractions, setSelectedAttractions] = useState<string[]>(visitedInDept);
     const [showProposalForm, setShowProposalForm] = useState(false);
@@ -254,6 +256,7 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({
                     onToggleVisited={handleToggleVisitedFromDetail}
                     onClose={() => setSelectedAttractionDetail(null)}
                     user={user}
+                    isAdmin={isAdmin}
                 />
             )}
         </div>

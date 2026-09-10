@@ -4,6 +4,7 @@ import type { Attraction } from '../interfaces/attraction';
 import { useAttractionReviews } from '../hooks/useAttractionReviews';
 import StarRating from './StarRating';
 import ReviewSection from './ReviewSection';
+import MapPicker from './UI/MapPicker';
 
 interface AttractionDetailModalProps {
     attraction: Attraction;
@@ -11,6 +12,7 @@ interface AttractionDetailModalProps {
     onToggleVisited: (id: string) => void;
     onClose: () => void;
     user: User | null;
+    isAdmin?: boolean;
 }
 
 const AttractionDetailModal: React.FC<AttractionDetailModalProps> = ({
@@ -19,6 +21,7 @@ const AttractionDetailModal: React.FC<AttractionDetailModalProps> = ({
     onToggleVisited,
     onClose,
     user,
+    isAdmin,
 }) => {
     const { reviews, averageRating, loading, addReview, removeReview } = useAttractionReviews(attraction.id);
 
@@ -29,6 +32,10 @@ const AttractionDetailModal: React.FC<AttractionDetailModalProps> = ({
         }
         await addReview({ ...reviewData, attractionId: attraction.id });
     };
+
+    const mapsSearchQuery = attraction.latitude != null && attraction.longitude != null
+        ? `${attraction.latitude},${attraction.longitude}`
+        : `${attraction.name} ${attraction.regionName} Colombia`;
 
     return (
         <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-[60] p-4" onClick={onClose}>
@@ -74,7 +81,7 @@ const AttractionDetailModal: React.FC<AttractionDetailModalProps> = ({
                     </div>
 
                     {/* Rating + Visitado */}
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-600 dark:text-gray-300 font-medium">Promedio:</span>
                             <StarRating rating={averageRating} size="md" showValue />
@@ -86,7 +93,7 @@ const AttractionDetailModal: React.FC<AttractionDetailModalProps> = ({
                         </div>
                         <button
                             onClick={() => onToggleVisited(attraction.id)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${isVisited
+                            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer w-full sm:w-auto ${isVisited
                                 ? 'bg-emerald-600 text-white hover:bg-emerald-700'
                                 : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500'
                                 }`}
@@ -119,10 +126,24 @@ const AttractionDetailModal: React.FC<AttractionDetailModalProps> = ({
                         </p>
                     </div>
 
-                    {/* Ubicación en Google Maps */}
+                    {/* Ubicación */}
                     <div className="mb-6">
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
+                            Ubicación
+                        </h3>
+                        {attraction.latitude != null && attraction.longitude != null && (
+                            <div className="mb-4">
+                                <MapPicker
+                                    latitude={attraction.latitude}
+                                    longitude={attraction.longitude}
+                                    onChange={() => {}}
+                                    height="250px"
+                                    readOnly
+                                />
+                            </div>
+                        )}
                         <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${attraction.name} ${attraction.regionName} Colombia`)}`}
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsSearchQuery)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-sm font-medium"
@@ -140,10 +161,10 @@ const AttractionDetailModal: React.FC<AttractionDetailModalProps> = ({
                         key={attraction.id}
                         reviews={reviews}
                         loading={loading}
-                        averageRating={averageRating}
                         onAddReview={handleAddReview}
                         onDeleteReview={removeReview}
                         user={user}
+                        isAdmin={isAdmin}
                     />
                 </div>
 

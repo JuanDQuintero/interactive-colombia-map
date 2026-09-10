@@ -7,15 +7,15 @@ import ConfirmationModal from './UI/ConfirmationModal';
 interface ReviewSectionProps {
     reviews: AttractionReview[];
     loading: boolean;
-    averageRating: number;
     onAddReview: (review: Omit<AttractionReview, 'id' | 'createdAt'>) => Promise<void>;
     onDeleteReview?: (reviewId: string) => Promise<void>;
     user: User | null;
+    isAdmin?: boolean;
 }
 
 const REVIEWS_PER_PAGE = 5;
 
-const ReviewSection: React.FC<ReviewSectionProps> = ({ reviews, loading, averageRating, onAddReview, onDeleteReview, user }) => {
+const ReviewSection: React.FC<ReviewSectionProps> = ({ reviews, loading, onAddReview, onDeleteReview, user, isAdmin }) => {
     const [myRating, setMyRating] = useState(0);
     const [myComment, setMyComment] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -81,16 +81,12 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ reviews, loading, average
             <div className="flex items-center justify-between mb-4">
                 <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
                     Reseñas y Comentarios
-                </h4>
-                {reviews.length > 0 && (
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600 dark:text-gray-300">Promedio:</span>
-                        <StarRating rating={averageRating} size="sm" />
-                        <span className="text-sm text-gray-600 dark:text-gray-300">
-                            {averageRating.toFixed(1)} ({reviews.length} {reviews.length === 1 ? 'reseña' : 'reseñas'})
+                    {reviews.length > 0 && (
+                        <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
+                            ({reviews.length} {reviews.length === 1 ? 'reseña' : 'reseñas'})
                         </span>
-                    </div>
-                )}
+                    )}
+                </h4>
             </div>
 
             {user ? (
@@ -153,13 +149,13 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ reviews, loading, average
                                                 <span className="text-xs text-gray-500 dark:text-gray-400">
                                                     {formatDate(review.createdAt)}
                                                 </span>
-                                                {user?.uid === review.userId && onDeleteReview && (
+                                                {(user?.uid === review.userId || isAdmin) && onDeleteReview && (
                                                     <button
                                                         type="button"
                                                         onClick={() => handleDelete(review.id)}
                                                         className="text-sm text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors cursor-pointer"
                                                         aria-label={`Eliminar reseña de ${review.userName}`}
-                                                        title="Eliminar mi reseña"
+                                                        title={isAdmin && user?.uid !== review.userId ? "Eliminar reseña (admin)" : "Eliminar mi reseña"}
                                                     >
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -212,7 +208,11 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ reviews, loading, average
                 onClose={() => setDeleteReviewId(null)}
                 onConfirm={confirmDelete}
                 title="Eliminar reseña"
-                message="¿Seguro que deseas eliminar tu reseña? Esta acción no se puede deshacer."
+                message={
+                    deleteReviewId && user && reviews.find(r => r.id === deleteReviewId)?.userId === user.uid
+                        ? '¿Seguro que deseas eliminar tu reseña? Esta acción no se puede deshacer.'
+                        : '¿Seguro que deseas eliminar esta reseña? Esta acción no se puede deshacer.'
+                }
                 confirmText="Eliminar"
                 cancelText="Cancelar"
                 variant="danger"

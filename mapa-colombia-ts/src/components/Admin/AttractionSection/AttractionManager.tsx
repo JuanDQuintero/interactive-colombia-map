@@ -9,6 +9,7 @@ import AttractionCard from './AttractionCard';
 import AttractionDetailModal from './AttractionDetailModal';
 import AttractionEditModal from './AttractionEditMotal';
 import DepartmentFilter from './DepartmentFilter';
+import { useAttractionsData } from '../../../context/AttractionsContext';
 
 interface AttractionsManagerProps {
     user: User;
@@ -16,6 +17,7 @@ interface AttractionsManagerProps {
 }
 
 const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateAttraction }) => {
+    const { refetch } = useAttractionsData();
     const [allAttractions, setAllAttractions] = useState<FirestoreAttraction[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
@@ -97,6 +99,7 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
 
         try {
             await deleteDoc(doc(db, 'attractions', targetId));
+            await refetch();
 
             await addDoc(collection(db, 'notifications'), {
                 userId: 'admin',

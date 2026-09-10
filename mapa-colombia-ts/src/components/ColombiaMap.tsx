@@ -1,6 +1,6 @@
 import React from 'react';
 import { departmentsData } from '../data/colombiaMapData';
-import { useAttractionsData } from '../hooks/useAttractionsData';
+import { useAttractionsData } from '../context/AttractionsContext';
 
 interface ColombiaMapProps {
     visitedAttractions: Record<string, string[]>;

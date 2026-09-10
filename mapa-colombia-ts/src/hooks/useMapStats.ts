@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { departmentsData } from '../data/colombiaMapData';
-import { useAttractionsData } from './useAttractionsData';
+import { useAttractionsData } from '../context/AttractionsContext';
 
 export const useMapStats = (visitedAttractions: Record<string, string[]>) => {
     const { data: attractionsByDept } = useAttractionsData();

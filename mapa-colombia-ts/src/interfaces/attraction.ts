@@ -22,6 +22,8 @@ export interface Attraction {
     category: string;
     regionId: string;
     regionName: string;
+    latitude?: number;
+    longitude?: number;
     createdAt: Date;
     createdBy?: string;
     isUserProposal: boolean;

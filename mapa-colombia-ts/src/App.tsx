@@ -1,4 +1,5 @@
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import { AttractionsProvider } from './context/AttractionsProvider';
 import Loader from './components/UI/Loader';
 import { useAuth } from './hooks/useAuth';
 import LoginPage from './pages/LoginPage';
@@ -15,29 +16,31 @@ function App() {
 
   return (
     <Router basename={basename}>
-      <Routes>
-        <Route
-          path="/login"
-          element={user ? <Navigate to="/" replace /> : <LoginPage login={login} error={error} />}
-        />
-        <Route
-          path="/"
-          element={
-            user ? (
-              <MainPage
-                user={user}
-                logout={logout}
-                isAdmin={userData?.isAdmin}
-              />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
+      <AttractionsProvider>
+        <Routes>
+          <Route
+            path="/login"
+            element={user ? <Navigate to="/" replace /> : <LoginPage login={login} error={error} />}
+          />
+          <Route
+            path="/"
+            element={
+              user ? (
+                <MainPage
+                  user={user}
+                  logout={logout}
+                  isAdmin={userData?.isAdmin}
+                />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
 
-        {/* Redirección por defecto */}
-        <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
-      </Routes>
+          {/* Redirección por defecto */}
+          <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
+        </Routes>
+      </AttractionsProvider>
     </Router>
   );
 }

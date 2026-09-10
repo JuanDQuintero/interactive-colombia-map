@@ -5,6 +5,7 @@ import { departmentsData } from '../../../data/colombiaMapData';
 import { db } from '../../../firebase';
 import type { AttractionProposal } from '../../../interfaces/attraction';
 import { getDepartmentDisplayName } from '../../../utils/getDepartmentName';
+import { useAttractionsData } from '../../../context/AttractionsContext';
 
 interface ProposalModalProps {
     proposal: AttractionProposal;
@@ -15,6 +16,7 @@ interface ProposalModalProps {
 }
 
 const ProposalModal: React.FC<ProposalModalProps> = ({ proposal, user, onClose, onUpdate, onDelete }) => {
+    const { refetch } = useAttractionsData();
     const [loading, setLoading] = useState(false);
 
     const generateAttractionId = (name: string): string => {
@@ -66,6 +68,7 @@ const ProposalModal: React.FC<ProposalModalProps> = ({ proposal, user, onClose, 
             // Si la propuesta es aprobada, agregarla a la colección de attractions
             if (status === 'approved') {
                 await addToAttractions(proposal);
+                await refetch();
             }
 
             // Enviar notificación al usuario que hizo la propuesta

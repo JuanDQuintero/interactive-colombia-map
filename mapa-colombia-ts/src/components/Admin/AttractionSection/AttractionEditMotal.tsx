@@ -5,6 +5,24 @@ import { useState } from 'react';
 import { db } from '../../../firebase';
 import type { FirestoreAttraction } from '../../../interfaces/attraction';
 import Button from '../../UI/Button';
+import CategorySelect, { type CategoryOption } from '../../UI/CategorySelect';
+import { useAttractionsData } from '../../../context/AttractionsContext';
+import { departmentsData } from '../../../data/colombiaMapData';
+import { DEPARTMENT_CENTERS } from '../../../data/departmentCenters';
+import MapPicker from '../../UI/MapPicker';
+
+const CATEGORY_OPTIONS: CategoryOption[] = [
+    { value: 'Pueblos y Cultura', label: 'Pueblos y Cultura' },
+    { value: 'Aventura', label: 'Aventura' },
+    { value: 'Naturaleza y Ecoturismo', label: 'Naturaleza y Ecoturismo' },
+    { value: 'Familiar', label: 'Familiar' },
+    { value: 'Otros', label: 'Otros' },
+];
+
+const DEPARTMENT_OPTIONS: CategoryOption[] = Object.entries(departmentsData).map(([value, dept]) => ({
+    value,
+    label: dept.name,
+}));
 
 interface AttractionEditModalProps {
     attraction: FirestoreAttraction;
@@ -14,11 +32,16 @@ interface AttractionEditModalProps {
 }
 
 const AttractionEditModal: React.FC<AttractionEditModalProps> = ({ attraction, user, onClose, onUpdate }) => {
+    const { refetch } = useAttractionsData();
     const [formData, setFormData] = useState({
         name: attraction.name,
         description: attraction.description,
         image: attraction.image,
-        category: attraction.category
+        category: attraction.category,
+        regionId: attraction.regionId,
+        regionName: attraction.regionName,
+        latitude: attraction.latitude,
+        longitude: attraction.longitude
     });
     const [loading, setLoading] = useState(false);
 
@@ -50,10 +73,15 @@ const AttractionEditModal: React.FC<AttractionEditModalProps> = ({ attraction, u
                 name: formData.name,
                 description: formData.description,
                 image: formData.image,
-                category: formData.category
+                category: formData.category,
+                regionId: formData.regionId,
+                regionName: formData.regionName,
+                latitude: formData.latitude,
+                longitude: formData.longitude
             };
 
             onUpdate(updatedAttraction);
+            await refetch();
             onClose();
         } catch (error) {
             console.error("Error updating attraction:", error);
@@ -63,7 +91,7 @@ const AttractionEditModal: React.FC<AttractionEditModalProps> = ({ attraction, u
         }
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
@@ -134,19 +162,53 @@ const AttractionEditModal: React.FC<AttractionEditModalProps> = ({ attraction, u
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     Categoría
                                 </label>
-                                <select
-                                    name="category"
-                                    value={formData.category}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                    required
-                                >
-                                    <option value="Pueblos y Cultura">Pueblos y Cultura</option>
-                                    <option value="Aventura">Aventura</option>
-                                    <option value="Naturaleza y Ecoturismo">Naturaleza y Ecoturismo</option>
-                                    <option value="Familiar">Familiar</option>
-                                    <option value="Otros">Otros</option>
-                                </select>
+                                <CategorySelect
+                                    options={CATEGORY_OPTIONS}
+                                    value={CATEGORY_OPTIONS.find(opt => opt.value === formData.category) || null}
+                                    onChange={(option) => setFormData(prev => ({ ...prev, category: option?.value || '' }))}
+                                    placeholder="Selecciona una categoría"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Ubicación (Departamento)
+                                </label>
+                                <CategorySelect
+                                    options={DEPARTMENT_OPTIONS}
+                                    value={DEPARTMENT_OPTIONS.find(opt => opt.value === formData.regionId) || null}
+                                    onChange={(option) => {
+                                        const departmentName = option ? departmentsData[option.value]?.name : '';
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            regionId: option?.value || '',
+                                            regionName: departmentName || '',
+                                            latitude: undefined,
+                                            longitude: undefined
+                                        }));
+                                    }}
+                                    placeholder="Selecciona el departamento"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Ubicación en el mapa
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                    Haz clic en el mapa o arrastra el marcador para fijar la ubicación exacta.
+                                </p>
+                                <MapPicker
+                                    latitude={formData.latitude}
+                                    longitude={formData.longitude}
+                                    fallbackCenter={DEPARTMENT_CENTERS[formData.regionId]}
+                                    onChange={(lat, lng) => setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }))}
+                                />
+                                {formData.latitude != null && formData.longitude != null && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                        Coordenadas: {formData.latitude.toFixed(5)}, {formData.longitude.toFixed(5)}
+                                    </p>
+                                )}
                             </div>
 
                             <div className="flex justify-end gap-3 mt-6">

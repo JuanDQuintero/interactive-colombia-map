@@ -8,16 +8,18 @@ interface LoginPageProps {
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ login, error }) => {
+    const bgImage = import.meta.env.BASE_URL + 'images/bg-login.jpg';
+
     return (
-        <div className="relative min-h-screen bg-gradient-to-br from-emerald-800 via-emerald-600 to-teal-500 flex items-center justify-center overflow-hidden">
-            {/* Decoración de fondo */}
-            <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
-            <div className="absolute -bottom-32 -right-20 h-[28rem] w-[28rem] rounded-full bg-teal-300/20 blur-3xl" />
-            <div className="absolute right-1/4 top-1/4 h-40 w-40 rounded-full bg-emerald-300/30 blur-2xl" />
-            <div className="absolute bottom-1/4 left-1/4 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div
+            className="relative min-h-screen flex items-center justify-center overflow-hidden bg-cover bg-center"
+            style={{ backgroundImage: `url(${bgImage})` }}
+        >
+            {/* Overlay oscuro para legibilidad del card */}
+            <div className="absolute inset-0 bg-black/20" />
 
             <div className="relative z-10 w-full max-w-md px-4 py-8">
-                <div className="rounded-2xl border border-white/50 bg-white/95 p-8 shadow-2xl backdrop-blur-sm sm:p-10 dark:border-gray-700 dark:bg-gray-800/95">
+                <div className="rounded-2xl bg-white/60 p-8 shadow-2xl backdrop-blur-sm sm:p-10 dark:bg-gray-800/50">
                     {/* Icono */}
                     <div className="mb-6 flex justify-center">
                         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 shadow-lg">

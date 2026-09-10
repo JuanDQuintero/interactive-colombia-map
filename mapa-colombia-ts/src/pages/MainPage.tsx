@@ -72,6 +72,7 @@ const MainPage: React.FC<MainPageProps> = ({ user, logout, isAdmin }) => {
                     onClose={() => setIsModalOpen(false)}
                     saveDepartmentAttractions={saveDepartmentAttractions}
                     user={user}
+                    isAdmin={isAdmin}
                 />
             )}
 

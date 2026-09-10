@@ -1,6 +1,6 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // Ruta base de GitHub Pages (https://juandquintero.github.io/interactive-colombia-map/)
@@ -36,4 +36,10 @@ export default defineConfig({
       injectRegister: 'auto',
     }),
   ],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test-setup.ts',
+    css: false,
+  },
 })

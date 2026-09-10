@@ -1,9 +1,9 @@
 import { getAuth } from 'firebase/auth';
 import { addDoc, collection } from 'firebase/firestore';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import Select, { type StylesConfig, type CSSObjectWithLabel } from 'react-select';
 import { db } from '../firebase';
 import Button from './UI/Button';
+import CategorySelect, { type CategoryOption } from './UI/CategorySelect';
 import Loader from './UI/Loader';
 
 interface ProposeAttractionFormProps {
@@ -13,13 +13,6 @@ interface ProposeAttractionFormProps {
 
 // Tipos para las opciones de imagen
 type ImageSource = 'url' | 'upload';
-
-// Definir tipos para React Select
-interface CategoryOption {
-    value: string;
-    label: string;
-    color?: string;
-}
 
 const categories: CategoryOption[] = [
     { value: 'pueblos_cultura', label: 'Pueblos y Cultura' },
@@ -38,116 +31,6 @@ const isValidUrl = (url: string): boolean => {
     }
 };
 
-// Estilos para React Select (modo claro)
-const customStyles: StylesConfig<CategoryOption, false> = {
-    menu: (provided) => ({
-        ...provided,
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-        border: '1px solid #eaeaea',
-        padding: '10px 0',
-        background: 'white',
-    }),
-    option: (provided, state) => ({
-        ...provided,
-        color: state.isSelected ? 'white' : state.data.color || '#333',
-        padding: '12px 20px',
-        background: state.isSelected
-            ? state.data.color || '#0065FF'
-            : state.isFocused
-                ? (state.data.color ? `${state.data.color}20` : '#f0f7ff')
-                : 'white',
-        '&:active': {
-            background: state.data.color || '#0065FF',
-            color: 'white'
-        }
-    }),
-    control: (provided, state) => ({
-        ...provided,
-        borderRadius: '8px',
-        borderColor: state.isFocused ? '#0065FF' : '#eaeaea',
-        boxShadow: state.isFocused ? '0 0 0 2px rgba(0, 101, 255, 0.2)' : 'none',
-        padding: '4px',
-        '&:hover': {
-            borderColor: state.isFocused ? '#0065FF' : '#ccc'
-        }
-    }),
-    menuPortal: (provided: CSSObjectWithLabel) => ({
-        ...provided,
-        zIndex: 9999
-    }),
-    singleValue: (provided, state) => ({
-        ...provided,
-        color: state.data.color || '#333',
-        fontWeight: '500'
-    })
-};
-
-// Estilos para el tema oscuro
-const darkStyles: StylesConfig<CategoryOption, false> = {
-    menu: (provided) => ({
-        ...provided,
-        borderRadius: '8px',
-        background: '#2D3748',
-        color: 'white',
-        border: '1px solid #4A5568',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-        padding: '10px 0',
-    }),
-    option: (provided, state) => ({
-        ...provided,
-        color: state.isSelected ? 'white' : 'white',
-        padding: '12px 20px',
-        background: state.isSelected
-            ? state.data.color || '#0065FF'
-            : state.isFocused
-                ? (state.data.color ? `${state.data.color}40` : '#4A5568')
-                : '#2D3748',
-        '&:active': {
-            background: state.data.color || '#0065FF'
-        }
-    }),
-    control: (provided, state) => ({
-        ...provided,
-        borderRadius: '8px',
-        background: '#2D3748',
-        border: '2px solid #4A5568',
-        color: 'white',
-        boxShadow: state.isFocused ? '0 0 0 2px rgba(66, 153, 225, 0.5)' : 'none',
-        '&:hover': {
-            borderColor: state.isFocused ? '#0065FF' : '#4A5568'
-        }
-    }),
-    singleValue: (provided, state) => ({
-        ...provided,
-        color: state.data.color || 'white',
-        fontWeight: '500'
-    }),
-    menuPortal: (provided: CSSObjectWithLabel) => ({
-        ...provided,
-        zIndex: 9999
-    }),
-    input: (provided) => ({
-        ...provided,
-        color: 'white'
-    }),
-    placeholder: (provided) => ({
-        ...provided,
-        color: '#A0AEC0'
-    }),
-    indicatorSeparator: (provided) => ({
-        ...provided,
-        backgroundColor: '#4A5568'
-    }),
-    dropdownIndicator: (provided) => ({
-        ...provided,
-        color: '#A0AEC0',
-        '&:hover': {
-            color: 'white'
-        }
-    }),
-};
-
 const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmentId, onClose }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -159,7 +42,6 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [imageError, setImageError] = useState<string | null>(null);
-    const [isDarkMode, setIsDarkMode] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const objectUrlRef = useRef<string>('');
 
@@ -172,30 +54,6 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
 
     const auth = getAuth();
     const currentUser = auth.currentUser;
-
-    // Detectar modo oscuro
-    useEffect(() => {
-        const checkDarkMode = () => {
-            const isDark = document.documentElement.classList.contains('dark');
-            setIsDarkMode(isDark);
-        };
-
-        // Verificar inicialmente
-        checkDarkMode();
-
-        // Observar cambios en el tema
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === 'class') {
-                    checkDarkMode();
-                }
-            });
-        });
-
-        observer.observe(document.documentElement, { attributes: true });
-
-        return () => observer.disconnect();
-    }, []);
 
     // Revocar blob URL al desmontar el componente
     useEffect(() => () => {
@@ -383,9 +241,6 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
             !isValidImage() ||
             !selectedCategory;
     }, [name, description, imageUrl, imageBase64, imageSource, selectedCategory]);
-
-    // Seleccionar estilos según el modo
-    const selectStyles = isDarkMode ? darkStyles : customStyles;
 
     return (
         <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4" onClick={onClose}>
@@ -585,17 +440,11 @@ const ProposeAttractionForm: React.FC<ProposeAttractionFormProps> = ({ departmen
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Categoría*
                             </label>
-                            <Select
+                            <CategorySelect
                                 options={categories}
                                 value={selectedCategory}
                                 onChange={handleCategoryChange}
-                                styles={selectStyles}
-                                className="react-select-container"
-                                classNamePrefix="react-select"
                                 placeholder="Selecciona una categoría"
-                                isSearchable={false}
-                                menuPortalTarget={document.body}
-                                menuPosition="absolute"
                             />
                         </div>
 

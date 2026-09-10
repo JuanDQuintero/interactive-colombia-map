@@ -1,8 +1,8 @@
 import { type User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { db } from '../firebase';
-import { useAttractionsData } from './useAttractionsData';
+import { useAttractionsData } from '../context/AttractionsContext';
 
 interface UserData {
     visitedAttractions: Record<string, string[]>;
@@ -73,20 +73,46 @@ export const useUserData = (user: User | null) => {
         return cleaned;
     }, [userData.visitedAttractions, attractionsByDept, isLoadingData]);
 
-    // Update Firebase when local data changes
-    const updateFirebase = async (newData: Partial<UserData>) => {
+    // Debounce: referencias para batchear escrituras a Firestore
+    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pendingDataRef = useRef<Record<string, string[]> | null>(null);
+
+    // Flush pendiente al desmontar o cambiar usuario
+    useEffect(() => {
+        return () => {
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+            if (pendingDataRef.current && user) {
+                const userDocRef = doc(db, 'users', user.uid);
+                setDoc(userDocRef, { visitedAttractions: pendingDataRef.current }, { merge: true })
+                    .catch(err => console.error("Error flushing pending data:", err));
+            }
+        };
+    }, [user]);
+
+    // Update Firebase when local data changes (con debounce)
+    const updateFirebase = (newAttractions: Record<string, string[]>) => {
         if (!user) return;
 
-        try {
-            const userDocRef = doc(db, 'users', user.uid);
-            await setDoc(userDocRef, newData, { merge: true });
-        } catch (err) {
-            console.error("Error updating user data:", err);
-            setError("Failed to save changes");
-        }
+        pendingDataRef.current = newAttractions;
+
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+
+        saveTimeoutRef.current = setTimeout(async () => {
+            const dataToSave = pendingDataRef.current;
+            pendingDataRef.current = null;
+            if (!dataToSave) return;
+
+            try {
+                const userDocRef = doc(db, 'users', user.uid);
+                await setDoc(userDocRef, { visitedAttractions: dataToSave }, { merge: true });
+            } catch (err) {
+                console.error("Error updating user data:", err);
+                setError("Failed to save changes");
+            }
+        }, 500);
     };
 
-    const saveDepartmentAttractions = async (departmentId: string, selectedAttractions: string[]) => {
+    const saveDepartmentAttractions = (departmentId: string, selectedAttractions: string[]) => {
         if (!user) return;
 
         const newAttractions = { ...userData.visitedAttractions };
@@ -98,7 +124,7 @@ export const useUserData = (user: User | null) => {
         }
 
         setUserData(prev => ({ ...prev, visitedAttractions: newAttractions }));
-        await updateFirebase({ visitedAttractions: newAttractions });
+        updateFirebase(newAttractions);
     };
 
     return {
