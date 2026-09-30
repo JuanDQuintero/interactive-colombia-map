@@ -1,19 +1,23 @@
 import type { AttractionProposal } from '../../../interfaces/attraction';
 import { getDepartmentDisplayName } from '../../../utils/getDepartmentName';
+import { IMAGE_FALLBACK } from '../../../utils/imageFallback';
 import Button from '../../UI/Button';
 
 interface ProposalCardProps {
     proposal: AttractionProposal;
+    loading: boolean;
     onSelect: (proposal: AttractionProposal) => void;
+    onApprove: () => void;
+    onReject: () => void;
 }
 
-const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onSelect }) => {
+const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, loading, onSelect, onApprove, onReject }) => {
     return (
-        <div onClick={() => onSelect(proposal)} className={`bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden border-l-4  cursor-pointer hover:shadow-lg transition-shadow ${proposal.status === 'approved'
-            ? 'border-green-500'
+        <div onClick={() => onSelect(proposal)} className={`panel border-l-4 overflow-hidden cursor-pointer hover:shadow-lg transition-shadow ${proposal.status === 'approved'
+            ? 'border-l-forest'
             : proposal.status === 'rejected'
-                ? 'border-red-500'
-                : 'border-yellow-500'
+                ? 'border-l-clay'
+                : 'border-l-gold'
             }`}
         >
             <div className="relative h-48 overflow-hidden">
@@ -22,15 +26,15 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onSelect }) => {
                     alt={proposal.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/placeholder-image.jpg';
+                        (e.target as HTMLImageElement).src = IMAGE_FALLBACK;
                     }}
                 />
                 <span
-                    className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-semibold ${proposal.status === 'approved'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                    className={`badge absolute top-2 right-2 ${proposal.status === 'approved'
+                        ? 'badge-forest'
                         : proposal.status === 'rejected'
-                            ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                            ? 'badge-clay'
+                            : 'badge-gold'
                         }`}
                 >
                     {proposal.status === 'approved'
@@ -41,27 +45,48 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onSelect }) => {
                 </span>
             </div>
             <div className="p-4">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">
+                <h3 className="font-display text-[15px] font-semibold text-ink mb-1">
                     {proposal.name}
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-                    <span className="font-semibold">Departamento:</span>{' '}
+                <p className="text-sm text-ink-soft mb-2">
+                    <span className="font-medium text-ink">Departamento:</span>{' '}
                     {getDepartmentDisplayName(proposal.departmentId)}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-                    <span className="font-semibold">Categoría:</span> {proposal.category}
+                <p className="text-sm text-ink-soft mb-2">
+                    <span className="font-medium text-ink">Categoría:</span> {proposal.category}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-4">
+                <p className="text-sm text-ink-soft line-clamp-2 mb-4">
                     {proposal.description}
                 </p>
-                <div className="flex justify-end items-center">
+                <div className="flex justify-between items-center gap-2">
                     <Button
                         variant='ghost'
                         onClick={() => onSelect(proposal)}
-                        className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                        className="text-clay hover:underline text-sm"
                     >
                         Ver detalles
                     </Button>
+                    {proposal.status === 'pending' && (
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                                variant="approved"
+                                size="sm"
+                                disabled={loading}
+                                onClick={onApprove}
+                            >
+                                Aprobar
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={loading}
+                                onClick={onReject}
+                                className="text-clay hover:text-ink"
+                            >
+                                Rechazar
+                            </Button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

@@ -23,17 +23,17 @@ const AttractionCard: React.FC<AttractionCardProps> = ({ attraction, onViewDetai
     };
 
     return (
-        <div onClick={() => onViewDetails(attraction)} className="bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden border-l-4 border-blue-500 cursor-pointer hover:shadow-lg transition-shadow">
+        <div onClick={() => onViewDetails(attraction)} className="panel overflow-hidden border-l-4 border-clay cursor-pointer hover:shadow-md transition-shadow">
             <div className="relative h-48 overflow-hidden">
                 {imageLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-200 dark:bg-gray-600">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <div className="absolute inset-0 flex items-center justify-center bg-paper-deep">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-forest"></div>
                     </div>
                 )}
 
                 {imageError ? (
-                    <div className="w-full h-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-                        <span className="text-gray-500 dark:text-gray-400 text-sm">Imagen no disponible</span>
+                    <div className="w-full h-full bg-paper-deep flex items-center justify-center">
+                        <span className="text-ink-faint text-sm">Imagen no disponible</span>
                     </div>
                 ) : (
                     <img
@@ -47,29 +47,30 @@ const AttractionCard: React.FC<AttractionCardProps> = ({ attraction, onViewDetai
                 )}
 
                 {attraction.isUserProposal && (
-                    <span className="absolute top-2 right-2 px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                    <span className="absolute top-2 right-2 badge badge-gold">
                         Propuesta de usuario
                     </span>
                 )}
             </div>
             <div className="p-4">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">
+                <h3 className="font-display text-[15px] font-semibold text-ink mb-1">
                     {attraction.name}
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                <p className="text-sm text-ink-soft mb-2">
                     <span className="font-semibold">Región:</span> {getDepartmentDisplayName(attraction.regionId)}
+                    {attraction.municipalityName && ` — ${attraction.municipalityName}`}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                <p className="text-sm text-ink-soft mb-2">
                     <span className="font-semibold">Categoría:</span> {attraction.category}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-4">
+                <p className="text-sm text-ink-soft line-clamp-2 mb-4">
                     {attraction.description}
                 </p>
                 <div className="flex justify-end items-center">
                     <Button
                         variant='ghost'
                         onClick={() => onViewDetails(attraction)}
-                        className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                        className="text-clay hover:underline text-sm"
                     >
                         Ver detalles
                     </Button>

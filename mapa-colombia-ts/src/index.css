@@ -2,40 +2,263 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ---------------------------------------------------------------
+   Paleta "editorial viajero": papel, tinta, bosque, ámbar y arcilla
+   --------------------------------------------------------------- */
+:root {
+  --paper: #f6f1e7;
+  --paper-deep: #ece5d6;
+  --panel: #fffdf7;
+  --ink: #1a1815;
+  --ink-soft: #57514a;
+  --ink-faint: #6f6961;
+  --rule: #ddd4c2;
+  --rule-soft: #eae3d4;
+  --forest: #1e6b4f;
+  --gold: #a8760d;
+  --clay: #b0522c;
+  --forest-soft: #e3eee7;
+  --gold-soft: #f3e9d2;
+
+  --map-base: #e8e1d0;
+  --map-base-hover: #dbd2bc;
+  --map-done: #2e7d5b;
+  --map-part: #e0b04b;
+  --map-visit: #8fc7ac;
+  --map-unmatched: #f0ebdf;
+  --map-stroke: #a49a86;
+}
+
+.dark {
+  --paper: #131210;
+  --paper-deep: #1a1815;
+  --panel: #1c1a16;
+  --ink: #ece5d7;
+  --ink-soft: #b0a89a;
+  --ink-faint: #8f8778;
+  --rule: #343027;
+  --rule-soft: #26231d;
+  --forest: #3fa077;
+  --gold: #d9a83f;
+  --clay: #d98155;
+  --forest-soft: #1d2a24;
+  --gold-soft: #2b2519;
+
+  --map-base: #2b2822;
+  --map-base-hover: #363229;
+  --map-done: #3f9573;
+  --map-part: #c79a3a;
+  --map-visit: #2c6f54;
+  --map-unmatched: #1f1d18;
+  --map-stroke: #57514a;
+}
+
+@theme inline {
+  --font-sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-panel: var(--panel);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-rule-soft: var(--rule-soft);
+  --color-forest: var(--forest);
+  --color-gold: var(--gold);
+  --color-clay: var(--clay);
+  --color-forest-soft: var(--forest-soft);
+  --color-gold-soft: var(--gold-soft);
+}
+
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: "Archivo", ui-sans-serif, system-ui, sans-serif;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: var(--map-part);
+    color: #141210;
+  }
+
   button {
     cursor: pointer;
   }
   textarea {
     resize: none;
   }
+
+  /* Mapa: colores de las regiones */
   .department {
-    @apply fill-gray-300 stroke-gray-600 transition-all duration-200 ease-in-out cursor-pointer dark:fill-gray-600 dark:stroke-gray-300;
+    @apply transition-all duration-200 ease-in-out cursor-pointer;
+    fill: var(--map-base);
+    stroke: var(--map-stroke);
     stroke-width: 0.5;
   }
   .department:hover {
-    @apply fill-gray-400 dark:fill-gray-500;
+    fill: var(--map-base-hover);
     transform: translateY(-1px);
   }
   .department.visited-some {
-    @apply fill-yellow-300 dark:fill-yellow-500;
+    fill: var(--map-part);
   }
   .department.visited-some:hover {
-    @apply fill-yellow-400 dark:fill-yellow-300;
+    fill: var(--map-part);
+    filter: brightness(1.05);
   }
   .department.visited-all {
-    @apply fill-emerald-600 dark:fill-emerald-500;
+    fill: var(--map-done);
   }
   .department.visited-all:hover {
-    @apply fill-emerald-700 dark:fill-emerald-400;
+    filter: brightness(1.08);
+  }
+  .municipality {
+    @apply transition-colors duration-150 cursor-pointer;
+    fill: var(--map-base);
+    stroke: var(--map-stroke);
+    stroke-width: 0.6;
+    fill-rule: evenodd;
+  }
+  .municipality:hover {
+    fill: var(--map-base-hover);
+  }
+  .municipality.visited {
+    fill: var(--map-visit);
+  }
+  .municipality.visited:hover {
+    filter: brightness(1.06);
+  }
+  .municipality.partial {
+    fill: var(--map-part);
+  }
+  .municipality.partial:hover {
+    filter: brightness(1.05);
+  }
+  .municipality.unmatched {
+    fill: var(--map-unmatched);
+    cursor: default;
+  }
+  .municipality.unmatched:hover {
+    fill: var(--map-unmatched);
+  }
+  .department:focus,
+  .department:focus-visible,
+  .municipality:focus,
+  .municipality:focus-visible {
+    outline: none;
   }
 }
 
 @layer components {
-  path[name="San Andrés y Providencia"] {
-    transform: translate(50px, 50px) scale(0.6);
+  /* Panel de contenido: hoja de papel con filete fino */
+  .panel {
+    background-color: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
   }
-  path[name="San Andrés y Providencia"]:hover {
-    transform: translate(50px, 50px) scale(0.61);
+
+  /* Etiqueta micro en versalitas: recurso típico de las guías impresas */
+  .micro {
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* Filete que completa una línea de título */
+  .rule-fill {
+    height: 1px;
+    flex: 1;
+    background-color: var(--rule);
+  }
+
+  /* Superficie de diálogo (modales) */
+  .modal-card {
+    background-color: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    box-shadow: 0 24px 48px -16px rgb(0 0 0 / 0.35);
+  }
+
+  /* Campos de formulario: input, select y textarea */
+  .field {
+    width: 100%;
+    border: 1px solid var(--rule);
+    background-color: var(--panel);
+    color: var(--ink);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field::placeholder {
+    color: var(--ink-faint);
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--forest);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--forest) 28%, transparent);
+  }
+  .field:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Etiqueta de campo */
+  .field-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 0.375rem;
+  }
+
+  /* Insignias de estado */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    padding: 0.15rem 0.6rem;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .badge-forest {
+    background: color-mix(in srgb, var(--forest) 14%, var(--panel));
+    color: var(--forest);
+    border-color: color-mix(in srgb, var(--forest) 35%, transparent);
+  }
+  .badge-gold {
+    background: color-mix(in srgb, var(--gold) 16%, var(--panel));
+    color: var(--gold);
+    border-color: color-mix(in srgb, var(--gold) 40%, transparent);
+  }
+  .badge-clay {
+    background: color-mix(in srgb, var(--clay) 14%, var(--panel));
+    color: var(--clay);
+    border-color: color-mix(in srgb, var(--clay) 35%, transparent);
+  }
+  .badge-muted {
+    background: var(--paper-deep);
+    color: var(--ink-soft);
+    border-color: var(--rule);
   }
 }

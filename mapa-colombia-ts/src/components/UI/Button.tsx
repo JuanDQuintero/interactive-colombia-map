@@ -24,17 +24,17 @@ const Button: React.FC<ButtonProps> = ({
     ...props
 }) => {
     // Clases base
-    const baseClasses = 'rounded-lg font-medium transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer';
+    const baseClasses = 'rounded-md font-medium transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-panel disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer';
 
     // Variantes - ahora con disabled para anular hover
     const variantClasses = {
-        primary: 'bg-blue-600 text-white focus:ring-blue-500 hover:bg-blue-700 disabled:hover:bg-blue-600',
-        secondary: 'bg-gray-600 text-white focus:ring-gray-500 hover:bg-gray-700 disabled:hover:bg-gray-600',
-        danger: 'bg-red-600 text-white focus:ring-red-500 hover:bg-red-700 disabled:hover:bg-red-600',
-        outline: 'border border-gray-300 dark:border-gray-600 bg-transparent text-gray-800 dark:text-gray-200 focus:ring-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:hover:bg-transparent dark:disabled:hover:bg-transparent',
-        ghost: 'bg-transparent text-gray-800 dark:text-gray-200 focus:ring-blue-500 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:hover:bg-transparent dark:disabled:hover:bg-transparent',
-        approved: 'bg-green-600 text-white focus:ring-green-500 hover:bg-green-700 disabled:hover:bg-green-600',
-        warning: 'bg-yellow-100 text-yellow-600 focus:ring-yellow-500 hover:bg-yellow-700 disabled:hover:bg-yellow-600',
+        primary: 'bg-ink text-paper focus:ring-forest hover:opacity-90 disabled:hover:opacity-100',
+        secondary: 'bg-rule text-ink focus:ring-forest hover:brightness-95 disabled:hover:brightness-100',
+        danger: 'bg-clay text-paper focus:ring-clay hover:brightness-110 disabled:hover:brightness-100',
+        outline: 'border border-rule bg-transparent text-ink focus:ring-forest hover:bg-paper-deep disabled:hover:bg-transparent',
+        ghost: 'bg-transparent text-ink-soft focus:ring-forest hover:bg-paper-deep hover:text-ink disabled:hover:bg-transparent disabled:hover:text-ink-soft',
+        approved: 'bg-forest text-paper focus:ring-forest hover:brightness-110 disabled:hover:brightness-100',
+        warning: 'bg-gold text-[#141210] focus:ring-gold hover:brightness-105 disabled:hover:brightness-100',
     };
 
     // Tamaños

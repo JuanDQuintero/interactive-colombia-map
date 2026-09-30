@@ -19,11 +19,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ login, error }) => {
             <div className="absolute inset-0 bg-black/20" />
 
             <div className="relative z-10 w-full max-w-md px-4 py-8">
-                <div className="rounded-2xl bg-white/60 p-8 shadow-2xl backdrop-blur-sm sm:p-10 dark:bg-gray-800/50">
+                <div className="rounded-lg border border-rule bg-panel/85 p-8 shadow-xl backdrop-blur-sm sm:p-10">
                     {/* Icono */}
                     <div className="mb-6 flex justify-center">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 shadow-lg">
-                            <svg className="h-9 w-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <div className="flex h-16 w-16 items-center justify-center rounded-md bg-forest shadow-lg">
+                            <svg className="h-9 w-9 text-paper" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                                 <path
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
@@ -33,13 +33,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ login, error }) => {
                         </div>
                     </div>
 
-                    <h1 className="text-center text-3xl font-extrabold text-gray-800 dark:text-gray-100">
+                    <h1 className="text-center font-display text-3xl font-semibold text-ink">
                         Bienvenido
                     </h1>
-                    <h2 className="mb-3 text-center text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                        Mapa de Viajes por Colombia
+                    <h2 className="micro mb-3 text-center text-clay">
+                        Mapa de viajes por Colombia
                     </h2>
-                    <p className="mb-8 text-center text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+                    <p className="mb-8 text-center text-sm leading-relaxed text-ink-soft">
                         Registra los departamentos que has visitado, califica atractivos turísticos y lleva el control de tus viajes por Colombia.
                     </p>
 
@@ -56,13 +56,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ login, error }) => {
                     </Button>
 
                     {error && (
-                        <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-center text-sm text-red-600 dark:bg-red-900/30 dark:text-red-300">
+                        <p className="mt-4 rounded-md border border-clay/30 bg-clay/10 px-3 py-2 text-center text-sm text-clay">
                             {error}
                         </p>
                     )}
 
-                    <p className="mt-7 text-center text-xs text-gray-400 dark:text-gray-500">
-                        Colombia Check & Travel
+                    <p className="micro mt-7 text-center">
+                        Check &amp; Travel Colombia
                     </p>
                 </div>
             </div>

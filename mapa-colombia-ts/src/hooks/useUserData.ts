@@ -77,13 +77,27 @@ export const useUserData = (user: User | null) => {
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pendingDataRef = useRef<Record<string, string[]> | null>(null);
 
+    // Espejo del último userData confirmado, para que los handlers recién
+    // creados nunca lean un estado obsoleto al marcar/desmarcar visitas.
+    const userDataRef = useRef(userData);
+    useEffect(() => {
+        userDataRef.current = userData;
+    }, [userData]);
+
+    // Cadena de escrituras: garantiza que se apliquen en orden y que una
+    // escritura anterior no pise una más reciente.
+    const writeChainRef = useRef<Promise<void>>(Promise.resolve());
+
     // Flush pendiente al desmontar o cambiar usuario
     useEffect(() => {
         return () => {
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
             if (pendingDataRef.current && user) {
                 const userDocRef = doc(db, 'users', user.uid);
-                setDoc(userDocRef, { visitedAttractions: pendingDataRef.current }, { merge: true })
+                const dataToSave = pendingDataRef.current;
+                pendingDataRef.current = null;
+                writeChainRef.current = writeChainRef.current
+                    .then(() => setDoc(userDocRef, { visitedAttractions: dataToSave }, { merge: true }))
                     .catch(err => console.error("Error flushing pending data:", err));
             }
         };
@@ -97,25 +111,27 @@ export const useUserData = (user: User | null) => {
 
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
-        saveTimeoutRef.current = setTimeout(async () => {
+        saveTimeoutRef.current = setTimeout(() => {
             const dataToSave = pendingDataRef.current;
             pendingDataRef.current = null;
             if (!dataToSave) return;
 
-            try {
-                const userDocRef = doc(db, 'users', user.uid);
-                await setDoc(userDocRef, { visitedAttractions: dataToSave }, { merge: true });
-            } catch (err) {
-                console.error("Error updating user data:", err);
-                setError("Failed to save changes");
-            }
+            writeChainRef.current = writeChainRef.current
+                .then(async () => {
+                    const userDocRef = doc(db, 'users', user.uid);
+                    await setDoc(userDocRef, { visitedAttractions: dataToSave }, { merge: true });
+                })
+                .catch(err => {
+                    console.error("Error updating user data:", err);
+                    setError("Failed to save changes");
+                });
         }, 500);
     };
 
     const saveDepartmentAttractions = (departmentId: string, selectedAttractions: string[]) => {
         if (!user) return;
 
-        const newAttractions = { ...userData.visitedAttractions };
+        const newAttractions = { ...(userDataRef.current?.visitedAttractions || {}) };
 
         if (selectedAttractions.length > 0) {
             newAttractions[departmentId] = selectedAttractions;

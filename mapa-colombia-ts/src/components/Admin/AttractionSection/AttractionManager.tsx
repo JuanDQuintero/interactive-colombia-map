@@ -1,34 +1,57 @@
 import type { User } from 'firebase/auth';
 import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query } from 'firebase/firestore';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useAttractionsData } from '../../../context/AttractionsContext';
+import { departmentsData } from '../../../data/colombiaMapData';
 import { db } from '../../../firebase';
 import type { FirestoreAttraction } from '../../../interfaces/attraction';
+import Button from '../../UI/Button';
 import ConfirmationModal from '../../UI/ConfirmationModal';
 import Pagination from '../../UI/Pagination';
-import AttractionCard from './AttractionCard';
+import { useToast } from '../../UI/Toast';
 import AttractionDetailModal from './AttractionDetailModal';
 import AttractionEditModal from './AttractionEditMotal';
-import DepartmentFilter from './DepartmentFilter';
-import { useAttractionsData } from '../../../context/AttractionsContext';
+import AttractionTable, { type AttractionSortKey } from './AttractionTable';
 
 interface AttractionsManagerProps {
     user: User;
     onUpdateAttraction: () => void;
+    searchQuery: string;
+    selectedDepartment: string;
+    selectedMunicipality: string;
+    onCountsChange: (total: number) => void;
+    refreshSignal: number;
+    createSignal: number;
 }
 
-const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateAttraction }) => {
+const AttractionsManager: React.FC<AttractionsManagerProps> = ({
+    user,
+    onUpdateAttraction,
+    searchQuery,
+    selectedDepartment,
+    selectedMunicipality,
+    onCountsChange,
+    refreshSignal,
+    createSignal,
+}) => {
     const { refetch } = useAttractionsData();
+    const { showToast } = useToast();
     const [allAttractions, setAllAttractions] = useState<FirestoreAttraction[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
     const [selectedAttraction, setSelectedAttraction] = useState<FirestoreAttraction | null>(null);
     const [viewMode, setViewMode] = useState<'view' | 'edit'>('view');
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(12);
 
+    const [sortKey, setSortKey] = useState<AttractionSortKey | null>(null);
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [attractionToDelete, setAttractionToDelete] = useState<{ firestoreId: string; name: string } | null>(null);
+    const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
 
     const isMountedRef = useRef(true);
 
@@ -64,59 +87,161 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
         fetchAllAttractions();
     }, [fetchAllAttractions]);
 
-    // Filtrar atracciones por departamento
+    useEffect(() => {
+        if (refreshSignal > 0) fetchAllAttractions();
+    }, [refreshSignal, fetchAllAttractions]);
+
+    const prevCreateRef = useRef(createSignal);
+
+    useEffect(() => {
+        if (createSignal > prevCreateRef.current) {
+            setIsCreateModalOpen(true);
+        }
+        prevCreateRef.current = createSignal;
+    }, [createSignal]);
+
+    useEffect(() => {
+        onCountsChange(allAttractions.length);
+    }, [allAttractions.length, onCountsChange]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, selectedDepartment, selectedMunicipality]);
+
+    // Filtrar atracciones por búsqueda, departamento y municipio
     const filteredAttractions = useMemo(() => {
-        if (selectedDepartment === 'all') return allAttractions;
-        return allAttractions.filter(attr => attr.regionId === selectedDepartment);
-    }, [allAttractions, selectedDepartment]);
+        const q = searchQuery.trim().toLowerCase();
+        return allAttractions.filter(attr => {
+            const matchesDepartment = selectedDepartment === 'all' || attr.regionId === selectedDepartment;
+            const matchesMunicipality = selectedMunicipality === 'all' || attr.municipalityId === selectedMunicipality;
+            const matchesSearch = !q
+                || attr.name.toLowerCase().includes(q)
+                || attr.category.toLowerCase().includes(q)
+                || (attr.municipalityName?.toLowerCase().includes(q) ?? false);
+            return matchesDepartment && matchesMunicipality && matchesSearch;
+        });
+    }, [allAttractions, selectedDepartment, selectedMunicipality, searchQuery]);
+
+    // Ordenar
+    const sortedAttractions = useMemo(() => {
+        if (!sortKey) return filteredAttractions;
+        const dir = sortDirection === 'asc' ? 1 : -1;
+        return [...filteredAttractions].sort((a, b) => {
+            let cmp = 0;
+            switch (sortKey) {
+                case 'name':
+                    cmp = a.name.localeCompare(b.name);
+                    break;
+                case 'category':
+                    cmp = a.category.localeCompare(b.category);
+                    break;
+                case 'region': {
+                    const loc = (attr: FirestoreAttraction) =>
+                        `${departmentsData[attr.regionId]?.name || attr.regionId} · ${attr.municipalityName || ''}`;
+                    cmp = loc(a).localeCompare(loc(b));
+                    break;
+                }
+                case 'origin':
+                    cmp = (Number(a.isUserProposal) - Number(b.isUserProposal)) || a.name.localeCompare(b.name);
+                    break;
+            }
+            return cmp * dir;
+        });
+    }, [filteredAttractions, sortKey, sortDirection]);
 
     // Calcular atracciones paginadas
-    const totalPages = Math.ceil(filteredAttractions.length / itemsPerPage);
+    const totalPages = Math.ceil(sortedAttractions.length / itemsPerPage);
     const currentAttractions = useMemo(() => {
         const indexOfLastItem = currentPage * itemsPerPage;
         const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-        return filteredAttractions.slice(indexOfFirstItem, indexOfLastItem);
-    }, [filteredAttractions, currentPage, itemsPerPage]);
+        return sortedAttractions.slice(indexOfFirstItem, indexOfLastItem);
+    }, [sortedAttractions, currentPage, itemsPerPage]);
 
-    const handleDepartmentChange = (dept: string) => {
-        setSelectedDepartment(dept);
-        setCurrentPage(1);
+    const handleSortChange = (key: AttractionSortKey) => {
+        setSortDirection(prev => (sortKey === key && prev === 'asc' ? 'desc' : 'asc'));
+        setSortKey(key);
     };
 
-    const handleDeleteClick = (firestoreId: string, name: string) => {
-        setAttractionToDelete({ firestoreId, name });
-        setIsDeleteModalOpen(true);
+    const handleToggleSelect = (id: string) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
     };
 
-    const handleDeleteConfirm = async () => {
-        if (!attractionToDelete) return;
+    const handleToggleSelectAll = () => {
+        const ids = currentAttractions.map(a => a.firestoreId);
+        const allSelected = ids.length > 0 && ids.every(id => selectedIds.includes(id));
+        setSelectedIds(prev => allSelected
+            ? prev.filter(id => !ids.includes(id))
+            : Array.from(new Set([...prev, ...ids]))
+        );
+    };
+
+    const clearSelection = () => setSelectedIds([]);
+
+    // Eliminar un atractivo (optimista, con rollback)
+    const deleteAttraction = async (firestoreId: string, name: string) => {
         const previousAttractions = [...allAttractions];
-        const targetId = attractionToDelete.firestoreId;
-        const targetName = attractionToDelete.name;
-
-        setAllAttractions(prev => prev.filter(attr => attr.firestoreId !== targetId));
+        setAllAttractions(prev => prev.filter(attr => attr.firestoreId !== firestoreId));
+        setSelectedAttraction(prev => prev?.firestoreId === firestoreId ? null : prev);
+        setSelectedIds(prev => prev.filter(id => id !== firestoreId));
+        setAttractionToDelete(null);
         setIsDeleteModalOpen(false);
 
         try {
-            await deleteDoc(doc(db, 'attractions', targetId));
+            await deleteDoc(doc(db, 'attractions', firestoreId));
             await refetch();
 
             await addDoc(collection(db, 'notifications'), {
                 userId: 'admin',
                 type: 'attraction_deleted',
-                attractionId: targetId,
-                attractionName: targetName,
-                message: `${user.displayName || 'Un administrador'} eliminó la atracción "${targetName}"`,
+                attractionId: firestoreId,
+                attractionName: name,
+                message: `${user.displayName || 'Un administrador'} eliminó la atracción "${name}"`,
                 read: false,
                 createdAt: new Date()
             });
         } catch (error) {
             console.error("Error deleting attraction:", error);
-            alert("Error al eliminar la atracción. Se revertirá el cambio.");
-            // Rollback en caso de fallo
+            showToast("Error al eliminar la atracción. Se revertirá el cambio.", 'error');
             setAllAttractions(previousAttractions);
-        } finally {
-            setAttractionToDelete(null);
+        }
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!attractionToDelete) return;
+        await deleteAttraction(attractionToDelete.firestoreId, attractionToDelete.name);
+    };
+
+    const handleBulkDeleteConfirm = async () => {
+        if (selectedIds.length === 0) return;
+
+        const previousAttractions = [...allAttractions];
+        const deletedNames = allAttractions
+            .filter(attr => selectedIds.includes(attr.firestoreId))
+            .map(attr => attr.name);
+
+        setAllAttractions(prev => prev.filter(attr => !selectedIds.includes(attr.firestoreId)));
+        setSelectedAttraction(prev => prev && selectedIds.includes(prev.firestoreId) ? null : prev);
+        setSelectedIds([]);
+        setIsBulkDeleteOpen(false);
+
+        try {
+            await Promise.all(selectedIds.map(id => deleteDoc(doc(db, 'attractions', id))));
+            await refetch();
+
+            await addDoc(collection(db, 'notifications'), {
+                userId: 'admin',
+                type: 'attraction_deleted',
+                attractionName: deletedNames[0] || '',
+                message: `${user.displayName || 'Un administrador'} eliminó ${selectedIds.length} atractivos${deletedNames.length ? `: ${deletedNames.slice(0, 5).join(', ')}${deletedNames.length > 5 ? '...' : ''}` : ''}`,
+                read: false,
+                createdAt: new Date()
+            });
+
+            showToast(`${selectedIds.length} atractivo(s) eliminado(s) correctamente`, 'success');
+        } catch (error) {
+            console.error("Error deleting attractions:", error);
+            showToast("Error al eliminar los atractivos. Se revertirá el cambio.", 'error');
+            setAllAttractions(previousAttractions);
         }
     };
 
@@ -127,57 +252,69 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
 
     const handleUpdateAttraction = (updatedAttraction: FirestoreAttraction) => {
         setAllAttractions(prev =>
-            prev.map(attr => attr.firestoreId === updatedAttraction.firestoreId ? updatedAttraction : attr)
+            prev.some(attr => attr.firestoreId === updatedAttraction.firestoreId)
+                ? prev.map(attr => attr.firestoreId === updatedAttraction.firestoreId ? updatedAttraction : attr)
+                : [updatedAttraction, ...prev]
         );
         onUpdateAttraction();
-    };
-
-    const handleRefresh = () => {
-        fetchAllAttractions();
     };
 
     if (loading) {
         return (
             <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-forest"></div>
             </div>
         );
     }
 
     return (
         <>
-            <div className="flex justify-between items-center mb-4">
-                <DepartmentFilter
-                    selectedDepartment={selectedDepartment}
-                    onDepartmentChange={handleDepartmentChange}
-                />
-                <button
-                    onClick={handleRefresh}
-                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"
-                >
-                    Actualizar
-                </button>
-            </div>
+            {selectedIds.length > 0 && (
+                <div className="flex items-center justify-between gap-3 mb-4 px-4 py-3 bg-gold-soft border border-gold/40 rounded-md">
+                    <p className="text-sm font-medium text-ink">
+                        {selectedIds.length} atractivo(s) seleccionado(s)
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={clearSelection}>
+                            Cancelar
+                        </Button>
+                        <Button variant="danger" size="sm" onClick={() => setIsBulkDeleteOpen(true)}>
+                            Eliminar seleccionados
+                        </Button>
+                    </div>
+                </div>
+            )}
 
-            {filteredAttractions.length === 0 ? (
-                <div className="bg-white dark:bg-gray-700 p-8 rounded-lg shadow-md text-center mt-6">
-                    <p className="text-gray-600 dark:text-gray-300">
-                        {selectedDepartment === 'all'
+            {sortedAttractions.length === 0 ? (
+                <div className="panel p-8 text-center mt-6">
+                    <p className="text-sm text-ink-soft">
+                        {allAttractions.length === 0
                             ? 'No hay atractivos turísticos en el sistema.'
-                            : `No hay atractivos turísticos en ${selectedDepartment}.`
+                            : 'No hay atractivos que coincidan con la búsqueda o los filtros seleccionados.'
                         }
                     </p>
                 </div>
             ) : (
                 <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-                        {currentAttractions.map((attraction) => (
-                            <AttractionCard
-                                key={attraction.firestoreId}
-                                attraction={attraction}
-                                onViewDetails={handleViewDetails}
-                            />
-                        ))}
+                    <div className="mt-4">
+                        <AttractionTable
+                            attractions={currentAttractions}
+                            selectedIds={selectedIds}
+                            sortKey={sortKey}
+                            sortDirection={sortDirection}
+                            onSortChange={handleSortChange}
+                            onToggleSelect={handleToggleSelect}
+                            onToggleSelectAll={handleToggleSelectAll}
+                            onView={handleViewDetails}
+                            onEdit={(attr) => {
+                                setSelectedAttraction(attr);
+                                setViewMode('edit');
+                            }}
+                            onDelete={(attr) => {
+                                setAttractionToDelete({ firestoreId: attr.firestoreId, name: attr.name });
+                                setIsDeleteModalOpen(true);
+                            }}
+                        />
                     </div>
 
                     <Pagination
@@ -185,7 +322,7 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
                         totalPages={totalPages}
                         onPageChange={setCurrentPage}
                         itemsPerPage={itemsPerPage}
-                        totalItems={filteredAttractions.length}
+                        totalItems={sortedAttractions.length}
                         onItemsPerPageChange={setItemsPerPage}
                     />
                 </>
@@ -196,7 +333,7 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
                     attraction={selectedAttraction}
                     onClose={() => setSelectedAttraction(null)}
                     onEdit={() => setViewMode('edit')}
-                    onDelete={() => handleDeleteClick(selectedAttraction.firestoreId, selectedAttraction.name)}
+                    onDelete={(firestoreId, name) => deleteAttraction(firestoreId, name)}
                 />
             )}
 
@@ -209,16 +346,34 @@ const AttractionsManager: React.FC<AttractionsManagerProps> = ({ user, onUpdateA
                 />
             )}
 
+            {isCreateModalOpen && (
+                <AttractionEditModal
+                    user={user}
+                    onClose={() => setIsCreateModalOpen(false)}
+                    onUpdate={handleUpdateAttraction}
+                />
+            )}
+
             <ConfirmationModal
                 isOpen={isDeleteModalOpen}
                 onClose={() => {
                     setIsDeleteModalOpen(false);
                     setAttractionToDelete(null);
                 }}
-                onConfirm={handleDeleteConfirm}
+                onConfirm={() => handleDeleteConfirm()}
                 title="Eliminar Atractivo"
                 message={`¿Estás seguro de que deseas eliminar el atractivo "${attractionToDelete?.name}"? Esta acción no se puede deshacer.`}
                 confirmText="Eliminar"
+                variant="danger"
+            />
+
+            <ConfirmationModal
+                isOpen={isBulkDeleteOpen}
+                onClose={() => setIsBulkDeleteOpen(false)}
+                onConfirm={() => handleBulkDeleteConfirm()}
+                title="Eliminar Atractivos"
+                message={`¿Estás seguro de que deseas eliminar ${selectedIds.length} atractivo(s) seleccionado(s)? Esta acción no se puede deshacer.`}
+                confirmText="Eliminar todos"
                 variant="danger"
             />
         </>

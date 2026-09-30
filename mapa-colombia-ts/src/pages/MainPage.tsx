@@ -1,14 +1,18 @@
 import { type User } from 'firebase/auth';
-import { type MouseEvent, useState } from 'react';
-import ColombiaMap from '../components/ColombiaMap';
-import DepartmentModal from '../components/DepartmentModal';
-import Legend from '../components/Legend';
-import Notifications from '../components/Notifications';
-import ProgressStats from '../components/ProgressStats';
-import TravelTips from '../components/TravelTips';
+import { type MouseEvent, useEffect, useRef, useState } from 'react';
+import colombiaIcon from '../assets/Colombia-icon.png';
+import ColombiaMap from '../components/Map/ColombiaMap';
+import DepartmentMap from '../components/Map/DepartmentMap';
+import Legend from '../components/Map/Legend';
+import DepartmentModal from '../components/Modals/DepartmentModal';
+import ProgressStats from '../components/Stats/ProgressStats';
+import InstallAppButton from '../components/UI/InstallAppButton';
 import Loader from '../components/UI/Loader';
 import UserDropdown from '../components/UI/UserDropdown';
+import Notifications from '../components/User/Notifications';
+import TravelTips from '../components/User/TravelTips';
 import { departmentsData } from '../data/colombiaMapData';
+import { useDepartmentStats } from '../hooks/useDepartmentStats';
 import { useMapStats } from '../hooks/useMapStats';
 import { useUserData } from '../hooks/useUserData';
 import AdminPage from './AdminPage';
@@ -28,14 +32,55 @@ const MainPage: React.FC<MainPageProps> = ({ user, logout, isAdmin }) => {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedDept, setSelectedDept] = useState<{ id: string, name: string } | null>(null);
+    const [drillDept, setDrillDept] = useState<{ id: string, name: string } | null>(null);
+    const [presetMunicipalityId, setPresetMunicipalityId] = useState<string | null>(null);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [tooltip, setTooltip] = useState<{ content: string; x: number; y: number } | null>(null);
     const [activeTab, setActiveTab] = useState<'map' | 'admin'>('map');
 
+    // El tooltip de hover solo deberia verse con mouse real y sin estar
+    // presionando; manteniendo pulsado (movil/PC) no debe aparecer ningun recuadro.
+    const lastPointerTypeRef = useRef<string | null>(null);
+    const isPointerDownRef = useRef(false);
+    useEffect(() => {
+        const onPointerDown = (e: PointerEvent) => {
+            lastPointerTypeRef.current = e.pointerType;
+            isPointerDownRef.current = true;
+            setTooltip(null);
+        };
+        const onPointerUp = () => { isPointerDownRef.current = false; };
+        const onPointerCancel = () => { isPointerDownRef.current = false; };
+        window.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerCancel);
+        return () => {
+            window.removeEventListener('pointerdown', onPointerDown);
+            window.removeEventListener('pointerup', onPointerUp);
+            window.removeEventListener('pointercancel', onPointerCancel);
+        };
+    }, []);
+
     const { completedCount, partialCount, unvisitedCount, totalProgress } = useMapStats(visitedAttractions);
+    const deptStats = useDepartmentStats(visitedAttractions, drillDept?.id ?? null);
+    const isDrilling = drillDept !== null && deptStats !== null && deptStats.loaded;
     const handleDepartmentClick = (depId: string, depName: string) => {
-        setSelectedDept({ id: depId, name: depName });
+        setTooltip(null);
+        setDrillDept({ id: depId, name: depName });
+    };
+
+    const openDepartmentModal = (department: { id: string, name: string }, municipalityId: string | null) => {
+        setTooltip(null);
+        setSelectedDept(department);
+        setPresetMunicipalityId(municipalityId);
         setIsModalOpen(true);
+    };
+
+    const handleShowAttractions = () => {
+        if (drillDept) openDepartmentModal(drillDept, null);
+    };
+
+    const handleMunicipalityClick = (municipalityId: string) => {
+        if (drillDept) openDepartmentModal(drillDept, municipalityId);
     };
 
     const handleLogout = () => {
@@ -44,7 +89,7 @@ const MainPage: React.FC<MainPageProps> = ({ user, logout, isAdmin }) => {
     };
 
     const handleMapHover = (name: string | null, event?: MouseEvent) => {
-        if (name && event) {
+        if (name && event && !isPointerDownRef.current && lastPointerTypeRef.current !== 'touch') {
             setTooltip({ content: name, x: event.pageX, y: event.pageY });
         } else {
             setTooltip(null);
@@ -56,9 +101,9 @@ const MainPage: React.FC<MainPageProps> = ({ user, logout, isAdmin }) => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 font-sans dark:bg-gray-900">
+        <div className="min-h-screen bg-paper font-sans text-ink">
             {tooltip && (
-                <div className="absolute pointer-events-none z-30 transform p-2 bg-gray-900 text-white text-sm rounded-md shadow-lg"
+                <div className="absolute pointer-events-none z-30 px-2.5 py-1.5 bg-ink text-paper text-xs font-medium tracking-wide rounded shadow-lg"
                     style={{ left: tooltip.x + 15, top: tooltip.y + 15 }}>
                     {tooltip.content}
                 </div>
@@ -73,40 +118,65 @@ const MainPage: React.FC<MainPageProps> = ({ user, logout, isAdmin }) => {
                     saveDepartmentAttractions={saveDepartmentAttractions}
                     user={user}
                     isAdmin={isAdmin}
+                    initialMunicipalityId={presetMunicipalityId}
                 />
             )}
 
             <div className="container mx-auto p-4 sm:p-6 md:p-8">
-                {/* Header con pestañas */}
+                {/* Header editorial: marca, título e índice de secciones */}
                 <header className="mb-6">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100">
-                                {activeTab === 'map' ? 'Mapa de Viajes por Colombia' : 'Panel de Administración'}
-                            </h1>
-                            {activeTab === 'map' && (
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    {completedCount + partialCount} / {Object.keys(departmentsData).length} departamentos visitados
-                                </p>
-                            )}
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <span className="hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-rule bg-panel shadow-sm">
+                                <img src={colombiaIcon} alt="" className="h-7 w-7" />
+                            </span>
+                            <div>
+                                <p className="micro text-clay mb-1.5">Guía interactiva de viajes</p>
+                                <h1 className="font-display text-[1.65rem] md:text-[2.15rem] font-semibold leading-tight tracking-tight text-ink">
+                                    {activeTab === 'map' ? (
+                                        <>Check &amp; Travel <em className="font-normal italic text-clay">Colombia</em></>
+                                    ) : (
+                                        <>Panel de <em className="font-normal italic text-clay">administración</em></>
+                                    )}
+                                </h1>
+                                {activeTab === 'map' && (
+                                    <p className="mt-1.5 text-sm text-ink-soft">
+                                        {drillDept && deptStats ? (
+                                            <>
+                                                <span className="font-semibold text-ink tabular-nums">{deptStats.visitedMunicipalities}</span>
+                                                {' de '}
+                                                <span className="tabular-nums">{deptStats.totalMunicipalities}</span>
+                                                {' municipios visitados en '}
+                                                <span className="font-medium text-ink">{drillDept.name}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="font-semibold text-ink tabular-nums">{completedCount + partialCount}</span>
+                                                {' de '}
+                                                <span className="tabular-nums">{Object.keys(departmentsData).length}</span>
+                                                {' departamentos con al menos una visita'}
+                                            </>
+                                        )}
+                                    </p>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="relative flex items-center gap-4">
-                            <div className="flex items-center gap-4">
-                                <Notifications
-                                    userId={user?.uid}
-                                    isAdmin={isAdmin}
-                                    onOpenProposal={() => setActiveTab('admin')}
-                                />
-                            </div>
+                        <div className="relative flex items-center gap-2">
+                            <InstallAppButton />
+                            <Notifications
+                                userId={user?.uid}
+                                isAdmin={isAdmin}
+                                onOpenProposal={() => setActiveTab('admin')}
+                            />
                             <button
                                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                className="outline-1 rounded-full overflow-hidden focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 mr-2 focus:outline-none transition-all duration-200"
+                                className="ml-1 outline-1 rounded-full overflow-hidden ring-rule hover:ring-2 focus:ring-2 focus:ring-offset-2 focus:ring-offset-paper focus:ring-forest mr-1 focus:outline-none transition-all duration-200"
                             >
                                 <img
                                     src={user.photoURL ?? 'src/assets/default-avatar.jpg'}
                                     alt={user.displayName ?? 'Avatar'}
-                                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full"
+                                    className="w-10 h-10 sm:w-11 sm:h-11 rounded-full"
                                 />
                             </button>
                             {isDropdownOpen && <UserDropdown onLogout={handleLogout} onClose={() => setIsDropdownOpen(false)} />}
@@ -114,61 +184,90 @@ const MainPage: React.FC<MainPageProps> = ({ user, logout, isAdmin }) => {
 
                     </div>
 
-                    {/* Barra de pestañas */}
-                    <div className="flex border-b border-gray-200 dark:border-gray-700 mt-4">
+                    {/* Índice de secciones, como en una guía impresa */}
+                    <nav className="mt-6 flex gap-7 border-b border-rule">
                         <button
                             onClick={() => setActiveTab('map')}
-                            className={`px-4 py-2 font-medium text-sm flex cursor-pointer items-center gap-2 ${activeTab === 'map'
-                                ? 'border-b-2 border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                            className={`-mb-px flex items-center gap-2 border-b-2 pb-3 text-[13px] font-semibold uppercase tracking-[0.14em] transition-colors ${activeTab === 'map'
+                                ? 'border-ink text-ink'
+                                : 'border-transparent text-ink-faint hover:text-ink-soft'}`}
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clipRule="evenodd" />
-                            </svg>
-                            Mapa
+                            <span className="text-clay">01</span> Mapa
                         </button>
 
                         {isAdmin && (
                             <button
                                 onClick={() => setActiveTab('admin')}
-                                className={`px-4 py-2 font-medium text-sm flex cursor-pointer items-center gap-2 ${activeTab === 'admin'
-                                    ? 'border-b-2 border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                                className={`-mb-px flex items-center gap-2 border-b-2 pb-3 text-[13px] font-semibold uppercase tracking-[0.14em] transition-colors ${activeTab === 'admin'
+                                    ? 'border-ink text-ink'
+                                    : 'border-transparent text-ink-faint hover:text-ink-soft'}`}
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                                </svg>
-                                Administración
+                                <span className="text-clay">02</span> Administración
                             </button>
                         )}
-                    </div>
+                    </nav>
+
+                    {activeTab === 'map' && (
+                        <p className="mt-4 flex items-start gap-2.5 font-display text-[15px] italic leading-relaxed text-ink-soft">
+                            <span aria-hidden="true" className="mt-px font-sans text-sm font-bold not-italic text-clay">→</span>
+                            Toca un departamento para explorar sus municipios y toca un municipio para registrar tus visitas.
+                        </p>
+                    )}
 
                 </header>
 
                 {activeTab === 'map' ? (
                     <>
-                        <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-md mb-6 dark:bg-blue-900/20 dark:border-blue-400 dark:text-blue-200" role="alert">
-                            <p className="font-bold">Interactúa con el mapa:</p>
-                            <p>Pasa el mouse sobre un departamento para ver su nombre y haz clic para registrar tus visitas.</p>
-                        </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-6 gap-8">
-                            <main className="lg:col-span-4 bg-white dark:bg-gray-600/50 p-4 rounded-lg shadow-md dark:border dark:border-gray-700">
-                                <ColombiaMap
-                                    visitedAttractions={visitedAttractions}
-                                    onDepartmentClick={handleDepartmentClick}
-                                    onDepartmentHover={handleMapHover}
-                                />
+                        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+                            <main className="lg:col-span-4 panel p-4 sm:p-5">
+                                {drillDept ? (
+                                    <DepartmentMap
+                                        departmentId={drillDept.id}
+                                        departmentName={drillDept.name}
+                                        visitedAttractions={visitedAttractions}
+                                        onMunicipalityClick={handleMunicipalityClick}
+                                        onBack={() => setDrillDept(null)}
+                                        onShowAttractions={handleShowAttractions}
+                                        onHover={handleMapHover}
+                                    />
+                                ) : (
+                                    <ColombiaMap
+                                        visitedAttractions={visitedAttractions}
+                                        onDepartmentClick={handleDepartmentClick}
+                                        onDepartmentHover={handleMapHover}
+                                    />
+                                )}
+                                <p className="mt-4 border-t border-rule-soft pt-3 text-center text-[10px] uppercase tracking-[0.1em] text-ink-faint">
+                                    Fronteras nacionales: Milenioscuro (CC BY-SA 4.0, Wikipedia) · Municipios: GADM 4.1 (2022)
+                                </p>
                             </main>
-                            <aside className="lg:col-span-2 space-y-6">
-                                <ProgressStats completed={completedCount} partial={partialCount} unvisited={unvisitedCount} totalProgress={totalProgress} />
-                                <Legend completed={completedCount} partial={partialCount} unvisited={unvisitedCount} />
+                            <aside className="lg:col-span-2 space-y-5">
+                                <ProgressStats
+                                    completed={isDrilling ? deptStats.completed : completedCount}
+                                    partial={isDrilling ? deptStats.partial : partialCount}
+                                    unvisited={isDrilling ? deptStats.unvisited : unvisitedCount}
+                                    totalProgress={isDrilling ? deptStats.totalProgress : totalProgress}
+                                    title={drillDept ? drillDept.name : undefined}
+                                    progressLabel={drillDept ? 'Municipios visitados' : undefined}
+                                    completedLabel={drillDept ? 'Completos' : undefined}
+                                    partialLabel={drillDept ? 'Parciales' : undefined}
+                                    unvisitedLabel={drillDept ? 'Sin visitar' : undefined}
+                                />
+                                <Legend
+                                    completed={isDrilling ? deptStats.completed : completedCount}
+                                    partial={isDrilling ? deptStats.partial : partialCount}
+                                    unvisited={isDrilling ? deptStats.unvisited : unvisitedCount}
+                                    completedLabel={drillDept ? 'Municipios completos' : undefined}
+                                    partialLabel={drillDept ? 'Municipios parciales' : undefined}
+                                    unvisitedLabel={drillDept ? 'Municipios sin visitar' : undefined}
+                                    tone={isDrilling ? 'muni' : 'dept'}
+                                />
                                 <TravelTips />
                             </aside>
                         </div>
                     </>
                 ) : (
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+                    <div className="panel overflow-hidden">
                         <AdminPage user={user} />
                     </div>
                 )}

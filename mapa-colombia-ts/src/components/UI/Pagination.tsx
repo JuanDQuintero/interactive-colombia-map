@@ -72,20 +72,20 @@ const Pagination: React.FC<PaginationProps> = ({
 
     return (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 px-4">
-            <div className="text-sm text-gray-600 dark:text-gray-300">
+            <div className="text-sm text-ink-soft tabular-nums">
                 Mostrando {startItem}-{endItem} de {totalItems} resultados
             </div>
 
             <div className="flex items-center gap-2">
                 {onItemsPerPageChange && (
                     <div className="flex items-center gap-2 mr-4">
-                        <label className="text-sm text-gray-600 dark:text-gray-300">
+                        <label className="text-sm text-ink-soft">
                             Mostrar:
                         </label>
                         <select
                             value={itemsPerPage}
                             onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-                            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                            className="field"
                         >
                             <option value={6}>6</option>
                             <option value={12}>12</option>
@@ -110,11 +110,11 @@ const Pagination: React.FC<PaginationProps> = ({
                             key={index}
                             onClick={() => typeof page === 'number' ? onPageChange(page) : null}
                             disabled={page === '...'}
-                            className={`min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-medium transition-colors ${page === currentPage
-                                    ? 'bg-blue-600 text-white'
+                            className={`min-w-[2.5rem] px-2 py-1 rounded-md font-display tabular-nums text-sm font-medium transition-colors ${page === currentPage
+                                    ? 'bg-ink text-paper'
                                     : page === '...'
-                                        ? 'text-gray-400 cursor-default'
-                                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                        ? 'text-ink-faint cursor-default'
+                                        : 'text-ink-soft hover:bg-paper-deep'
                                 }`}
                         >
                             {page}

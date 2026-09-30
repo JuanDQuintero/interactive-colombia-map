@@ -37,13 +37,13 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ onLogout, onClose }) => {
   return (
     <div
       ref={dropdownRef}
-      className="absolute top-full right-0 mt-2 w-56 bg-white rounded-md shadow-xl z-20 ring-1 ring-black ring-opacity-5 dark:bg-gray-800 dark:ring-gray-700"
+      className="absolute top-full right-0 mt-2 w-56 bg-panel border border-rule rounded-md shadow-lg z-20 overflow-hidden"
     >
       <div className="py-1">
         <a
           href="#"
           onClick={handleThemeToggle}
-          className="flex items-center justify-between gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors rounded-md m-1"
+          className="flex items-center justify-between gap-3 px-4 py-2 text-sm text-ink hover:bg-paper-deep transition-colors"
         >
           <span>{theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'}</span>
           {theme === 'light' ? (
@@ -53,12 +53,12 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ onLogout, onClose }) => {
           )}
         </a>
 
-        <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+        <div className="border-t border-rule-soft my-1"></div>
 
         <a
           href="#"
           onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-red-500 hover:text-white dark:text-gray-300 dark:hover:text-white transition-colors rounded-md m-1"
+          className="flex items-center gap-3 px-4 py-2 text-sm text-clay hover:bg-clay hover:text-paper dark:hover:text-paper transition-colors"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>

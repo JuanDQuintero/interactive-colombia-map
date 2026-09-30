@@ -13,6 +13,8 @@ interface CategorySelectProps {
     value: CategoryOption | null;
     onChange: (option: SingleValue<CategoryOption>) => void;
     placeholder?: string;
+    isSearchable?: boolean;
+    disabled?: boolean;
 }
 
 // Z-index máximo para que el menú esté siempre por encima de cualquier modal
@@ -30,34 +32,34 @@ const baseMenuStyles = (provided: CSSObjectWithLabel): CSSObjectWithLabel => ({
 const lightStyles: StylesConfig<CategoryOption, false> = {
     menu: (provided) => baseMenuStyles({
         ...provided,
-        borderRadius: '8px',
+        borderRadius: '6px',
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-        border: '1px solid #eaeaea',
+        border: '1px solid var(--rule)',
         padding: '10px 0',
-        background: 'white',
+        background: 'var(--panel)',
     }),
     option: (provided, state) => ({
         ...provided,
-        color: state.isSelected ? 'white' : state.data.color || '#333',
+        color: state.isSelected ? 'white' : state.data.color || 'var(--ink)',
         padding: '12px 20px',
         background: state.isSelected
-            ? state.data.color || '#0065FF'
+            ? state.data.color || 'var(--forest)'
             : state.isFocused
-                ? (state.data.color ? `${state.data.color}20` : '#f0f7ff')
-                : 'white',
+                ? (state.data.color ? `${state.data.color}20` : 'var(--paper-deep)')
+                : 'var(--panel)',
         '&:active': {
-            background: state.data.color || '#0065FF',
+            background: state.data.color || 'var(--forest)',
             color: 'white',
         },
     }),
     control: (provided, state) => ({
         ...provided,
-        borderRadius: '8px',
-        borderColor: state.isFocused ? '#0065FF' : '#eaeaea',
-        boxShadow: state.isFocused ? '0 0 0 2px rgba(0, 101, 255, 0.2)' : 'none',
+        borderRadius: '6px',
+        borderColor: state.isFocused ? 'var(--forest)' : 'var(--rule)',
+        boxShadow: state.isFocused ? '0 0 0 2px color-mix(in srgb, var(--forest) 25%, transparent)' : 'none',
         padding: '4px',
         '&:hover': {
-            borderColor: state.isFocused ? '#0065FF' : '#ccc',
+            borderColor: state.isFocused ? 'var(--forest)' : 'var(--rule)',
         },
     }),
     menuPortal: (provided: CSSObjectWithLabel) => ({
@@ -66,7 +68,7 @@ const lightStyles: StylesConfig<CategoryOption, false> = {
     }),
     singleValue: (provided, state) => ({
         ...provided,
-        color: state.data.color || '#333',
+        color: state.data.color || 'var(--ink)',
         fontWeight: '500',
     }),
 };
@@ -74,10 +76,10 @@ const lightStyles: StylesConfig<CategoryOption, false> = {
 const darkStyles: StylesConfig<CategoryOption, false> = {
     menu: (provided) => baseMenuStyles({
         ...provided,
-        borderRadius: '8px',
-        background: '#2D3748',
+        borderRadius: '6px',
+        background: 'var(--panel)',
         color: 'white',
-        border: '1px solid #4A5568',
+        border: '1px solid var(--rule)',
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
         padding: '10px 0',
     }),
@@ -86,23 +88,23 @@ const darkStyles: StylesConfig<CategoryOption, false> = {
         color: 'white',
         padding: '12px 20px',
         background: state.isSelected
-            ? state.data.color || '#0065FF'
+            ? state.data.color || 'var(--forest)'
             : state.isFocused
-                ? (state.data.color ? `${state.data.color}40` : '#4A5568')
-                : '#2D3748',
+                ? (state.data.color ? `${state.data.color}40` : 'var(--paper-deep)')
+                : 'var(--panel)',
         '&:active': {
-            background: state.data.color || '#0065FF',
+            background: state.data.color || 'var(--forest)',
         },
     }),
     control: (provided, state) => ({
         ...provided,
-        borderRadius: '8px',
-        background: '#2D3748',
-        border: '2px solid #4A5568',
+        borderRadius: '6px',
+        background: 'var(--panel)',
+        border: '2px solid var(--rule)',
         color: 'white',
-        boxShadow: state.isFocused ? '0 0 0 2px rgba(66, 153, 225, 0.5)' : 'none',
+        boxShadow: state.isFocused ? '0 0 0 2px color-mix(in srgb, var(--forest) 45%, transparent)' : 'none',
         '&:hover': {
-            borderColor: state.isFocused ? '#0065FF' : '#4A5568',
+            borderColor: state.isFocused ? 'var(--forest)' : 'var(--rule)',
         },
     }),
     singleValue: (provided, state) => ({
@@ -120,22 +122,22 @@ const darkStyles: StylesConfig<CategoryOption, false> = {
     }),
     placeholder: (provided) => ({
         ...provided,
-        color: '#A0AEC0',
+        color: 'var(--ink-faint)',
     }),
     indicatorSeparator: (provided) => ({
         ...provided,
-        backgroundColor: '#4A5568',
+        backgroundColor: 'var(--rule)',
     }),
     dropdownIndicator: (provided) => ({
         ...provided,
-        color: '#A0AEC0',
+        color: 'var(--ink-faint)',
         '&:hover': {
             color: 'white',
         },
     }),
 };
 
-const CategorySelect: React.FC<CategorySelectProps> = ({ options, value, onChange, placeholder }) => {
+const CategorySelect: React.FC<CategorySelectProps> = ({ options, value, onChange, placeholder, isSearchable = false, disabled = false }) => {
     const { theme } = useTheme();
     const styles = theme === 'dark' ? darkStyles : lightStyles;
 
@@ -145,10 +147,12 @@ const CategorySelect: React.FC<CategorySelectProps> = ({ options, value, onChang
             value={value}
             onChange={onChange}
             styles={styles}
-            className="react-select-container"
+            className={`react-select-container ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
             classNamePrefix="react-select"
             placeholder={placeholder}
-            isSearchable={false}
+            isSearchable={isSearchable}
+            isDisabled={disabled}
+            noOptionsMessage={() => 'Sin resultados'}
             menuPortalTarget={document.body}
             menuPosition="absolute"
             menuShouldScrollIntoView={true}

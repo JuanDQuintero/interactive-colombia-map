@@ -22,8 +22,8 @@ export default defineConfig({
         lang: 'es',
         display: 'standalone',
         orientation: 'portrait',
-        theme_color: '#10b981',
-        background_color: '#f9fafb',
+        theme_color: '#1e6b4f',
+        background_color: '#f6f1e7',
         icons: [
           { src: 'icons/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
@@ -32,6 +32,45 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        navigateFallback: 'index.html',
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-stylesheets',
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-webfonts',
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/[a-c]\.tile\.openstreetmap\.org\/[^/]+\/[^/]+\/[^/]+\/[^/]+\.png/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'osm-tiles',
+              expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /\.(?:png|jpe?g|gif|webp|avif|svg)(\?.*)?$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images',
+              expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
       injectRegister: 'auto',
     }),

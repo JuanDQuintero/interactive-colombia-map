@@ -59,3 +59,13 @@ export const getCategoryLabel = (id: CategoryId): string =>
 export const CATEGORIES_WITHOUT_TODOS = CATEGORY_OPTIONS.filter(
     (option) => option.id !== 'todos'
 );
+
+export interface CategorySelectOption {
+    value: CategoryId;
+    label: string;
+}
+
+export const CATEGORY_SELECT_OPTIONS: CategorySelectOption[] = CATEGORIES_WITHOUT_TODOS.map(({ id, label }) => ({
+    value: id,
+    label,
+}));

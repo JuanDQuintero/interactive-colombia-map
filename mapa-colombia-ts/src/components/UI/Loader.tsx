@@ -1,6 +1,6 @@
 const Loader: React.FC = () => {
     return (
-        <div className="fixed inset-0 flex justify-center items-center z-50">
+        <div className="fixed inset-0 flex flex-col justify-center items-center z-50 bg-paper">
             <style>{`
                 @keyframes flip {
                     0% { transform: perspective(600px) rotateY(0deg); }
@@ -14,7 +14,7 @@ const Loader: React.FC = () => {
             `}</style>
 
             <svg
-                className="flip-animation h-16 w-16 text-emerald-600"
+                className="flip-animation h-16 w-16 text-forest"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 192 260"
             >
@@ -28,8 +28,10 @@ const Loader: React.FC = () => {
                     181.275,144.887"
                 />
             </svg>
+
+            <p className="micro mt-5">Preparando tu ruta…</p>
         </div>
-    )
-}
+    );
+};
 
 export default Loader;
