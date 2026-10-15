@@ -1,0 +1,33 @@
+rules_version = '2';
+
+// Firebase Storage — Colombia Check & Travel
+// Publicar con: firebase deploy --only storage
+// (o Firebase Console → Storage → Rules → pegar este archivo → Publish)
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Datos estáticos del proyecto: solo lectura.
+    match /data/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Fotos de los viajes de la comunidad.
+    // Versión de diagnóstico: solo exigimos sesión iniciada y que cada quien
+    // escriba en su propia carpeta. Si esto funciona, puedes ir añadiendo los
+    // límites uno a uno (ver commented abajo).
+    match /trips/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      // allow write: if request.auth != null
+      //              && request.auth.uid == userId
+      //              && request.resource.size < 2 * 1024 * 1024
+      //              && request.resource.contentType.matches('image/.*');
+    }
+
+    match /{allPaths=**} {
+      allow read: if false;
+      allow write: if false;
+    }
+  }
+}

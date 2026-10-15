@@ -1,33 +1,43 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface BeforeInstallPromptEvent extends Event {
     prompt: () => Promise<void>;
     userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
 
-type InstallAvailability = 'prompt' | 'ios' | 'unsupported';
+/**
+ * - 'prompt': el navegador expuso beforeinstallprompt (prompt nativo).
+ * - 'manual': sin API; se muestran instrucciones según plataforma.
+ * - 'standalone': ya está instalada (no se muestra el botón).
+ */
+export type InstallAvailability = 'prompt' | 'manual' | 'standalone';
 
-const isIOS = (): boolean => {
-    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-    return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+export type InstallPlatform = 'ios' | 'android' | 'desktop';
+
+const getPlatform = (): InstallPlatform => {
+    const ua = navigator.userAgent;
+    const isIOSDevice =
+        /iPad|iPhone|iPod/.test(ua) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isIOSDevice) return 'ios';
+    if (/Android/i.test(ua)) return 'android';
+    return 'desktop';
 };
 
-const isStandalone = (): boolean =>
-    window.matchMedia('(display-mode: standalone)').matches ||
+export const isStandalone = (): boolean =>
+    window.matchMedia?.('(display-mode: standalone)').matches === true ||
     (navigator as unknown as { standalone?: boolean }).standalone === true;
 
-/**
- * Expone si el navegador permite instalar la app como PWA:
- * - 'prompt': Chrome/Android (beforeinstallprompt disponible).
- * - 'ios': Safari en iOS (sin API, solo instrucciones de "Añadir a pantalla inicio").
- * - 'unsupported': no soporta instalación (o ya está instalada).
- */
 export const useInstallPrompt = () => {
-    const [availability, setAvailability] = useState<InstallAvailability>('unsupported');
+    const [availability, setAvailability] = useState<InstallAvailability>('manual');
     const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+    const [platform] = useState<InstallPlatform>(getPlatform);
 
     useEffect(() => {
-        if (isStandalone()) return;
+        if (isStandalone()) {
+            setAvailability('standalone');
+            return;
+        }
 
         const onBeforeInstallPrompt = (event: Event) => {
             event.preventDefault();
@@ -37,16 +47,11 @@ export const useInstallPrompt = () => {
 
         const onAppInstalled = () => {
             setDeferredPrompt(null);
-            setAvailability('unsupported');
+            setAvailability('standalone');
         };
 
         window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
         window.addEventListener('appinstalled', onAppInstalled);
-
-        // iOS no dispara beforeinstallprompt: se muestra instrucciones.
-        if (!('onbeforeinstallprompt' in window) && isIOS()) {
-            setAvailability('ios');
-        }
 
         return () => {
             window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
@@ -54,16 +59,17 @@ export const useInstallPrompt = () => {
         };
     }, []);
 
-    const promptInstall = async (): Promise<boolean> => {
-        if (deferredPrompt) {
+    const promptInstall = useCallback(async (): Promise<boolean> => {
+        if (!deferredPrompt) return false;
+        try {
             await deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
             setDeferredPrompt(null);
-            setAvailability('unsupported');
             return outcome === 'accepted';
+        } catch {
+            return false;
         }
-        return false;
-    };
+    }, [deferredPrompt]);
 
-    return { availability, promptInstall };
+    return { availability, platform, hasNativePrompt: deferredPrompt !== null, promptInstall };
 };

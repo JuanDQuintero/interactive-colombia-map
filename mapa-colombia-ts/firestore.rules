@@ -1,0 +1,83 @@
+rules_version = '2';
+
+// Firebase Firestore — Colombia Check & Travel
+// Referencia versionada de las reglas de producción.
+// Mientras haces pruebas puedes mantener en la consola el allow-all temporal:
+//   match /{document=**} { allow read, write: if true; }
+// Para publicar esta versión: firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Perfil del viajero: nombre, foto, rol y lugares visitados.
+    // Solo el admin puede cambiar el rol (ni el propio usuario se auto-promueve).
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (
+        isAdmin()
+        || (request.auth.uid == userId && request.resource.data.isAdmin == resource.data.isAdmin)
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Catálogo de lugares turisticos del proyecto.
+    match /attractions/{attractionId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Propuestas de lugares enviadas por la comunidad.
+    match /attractionProposals/{proposalId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    // Reportes de estado de la ruta (Waze).
+    match /routeReports/{reportId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isSignedIn() && (
+        isAdmin() || resource.data.createdBy == request.auth.uid
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Viajes de la comunidad (los valida el admin desde el panel).
+    match /trips/{tripId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isSignedIn() && (
+        isAdmin() || resource.data.createdBy == request.auth.uid
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Reseñas de los lugares.
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (
+        isAdmin() || resource.data.userId == request.auth.uid
+      );
+    }
+
+    // Campana de notificaciones (lectura y escritura para usuarios autenticados).
+    match /notifications/{notificationId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Cualquier otra colección: bloqueada.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

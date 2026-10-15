@@ -16,9 +16,10 @@ interface NotificationsProps {
     userId: string;
     isAdmin?: boolean;
     onOpenProposal?: () => void;
+    openUp?: boolean;
 }
 
-const Notifications = ({ userId, isAdmin = false, onOpenProposal }: NotificationsProps) => {
+const Notifications = ({ userId, isAdmin = false, onOpenProposal, openUp = false }: NotificationsProps) => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
@@ -163,7 +164,7 @@ const Notifications = ({ userId, isAdmin = false, onOpenProposal }: Notification
      * Render
      * ------------------------------------------------- */
     return (
-        <div className="relative">
+        <div className={openUp ? '' : 'relative'}>
             <button
                 className="p-2 h-10 w-10 relative cursor-pointer rounded-md hover:bg-paper-deep focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-paper focus:ring-forest transition-all duration-200 group"
                 onClick={(e) => {
@@ -200,7 +201,7 @@ const Notifications = ({ userId, isAdmin = false, onOpenProposal }: Notification
             )}
 
             {isOpen && (
-                <div className="notification-container absolute right-0 mt-2 w-80 bg-panel border border-rule rounded-md shadow-lg overflow-hidden z-50">
+                <div className={`notification-container absolute w-80 max-w-[calc(100vw-1.5rem)] bg-panel border border-rule rounded-md shadow-lg overflow-hidden z-50 ${openUp ? 'left-1/2 bottom-full mb-2 -translate-x-1/2' : 'right-0 mt-2'}`}>
                     {/* Header */}
                     <div className="px-4 py-2.5 border-b border-rule flex justify-between items-center">
                         <span className="micro">Notificaciones</span>

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 // Wraps an SVG map (defined in its own viewBox units) with pan + zoom:
-// - one-finger / mouse drag to pan
+// - mouse/pen drag to pan; on touch the page must stay scrollable, so the map
+//   only pans with two fingers (one finger scrolls the document)
 // - pinch (touch) or wheel / trackpad scroll to zoom
 // - on-screen zoom buttons
-// The container uses touch-action: none so mobile gestures zoom the map
-// instead of the whole page.
+// touch-action: pan-y lets a single finger scroll the document while keeping
+// multi-touch gestures (pan + pinch) inside the map.
 //
 // NOTE: we must NOT use setPointerCapture here: with capture active, the
 // browser retargets compatibility click events to the capturing element, so
@@ -27,18 +28,23 @@ interface MapPanZoomProps {
     viewBox?: string;
     className?: string;
     children: ReactNode;
+    onZoomChange?: (k: number) => void;
 }
 
-const MapPanZoom: React.FC<MapPanZoomProps> = ({ viewBox = '0 0 1000 1000', className = '', children }) => {
+const MapPanZoom: React.FC<MapPanZoomProps> = ({ viewBox = '0 0 1000 1000', className = '', children, onZoomChange }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [transform, setTransform] = useState<Transform>({ x: 0, y: 0, k: 1 });
     const [isPanning, setIsPanning] = useState(false);
+
+    useEffect(() => {
+        onZoomChange?.(transform.k);
+    }, [transform.k, onZoomChange]);
 
     const parts = viewBox.split(/\s+/).map(Number);
     const vw = parts[2] || 1000;
     const vh = parts[3] || 1000;
 
-    const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+    const pointersRef = useRef<Map<number, { x: number; y: number; pointerType: string }>>(new Map());
     const lastMidRef = useRef<{ x: number; y: number } | null>(null);
     const lastDistRef = useRef(0);
     const movedRef = useRef(0);
@@ -75,7 +81,7 @@ const MapPanZoom: React.FC<MapPanZoomProps> = ({ viewBox = '0 0 1000 1000', clas
         if (!el) return;
 
         const onPointerDown = (e: PointerEvent) => {
-            pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY, pointerType: e.pointerType });
             movedRef.current = 0;
             if (pointersRef.current.size === 1) {
                 lastMidRef.current = toViewBox(e.clientX, e.clientY);
@@ -87,10 +93,11 @@ const MapPanZoom: React.FC<MapPanZoomProps> = ({ viewBox = '0 0 1000 1000', clas
         const onPointerMove = (e: PointerEvent) => {
             const prev = pointersRef.current.get(e.pointerId);
             if (!prev) return;
-            pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY, pointerType: e.pointerType });
             const count = pointersRef.current.size;
 
             if (count === 1) {
+                if (prev.pointerType !== 'mouse' && prev.pointerType !== 'pen') return;
                 const start = toViewBox(prev.x, prev.y);
                 const now = toViewBox(e.clientX, e.clientY);
                 movedRef.current += Math.hypot(now.x - start.x, now.y - start.y);
@@ -195,7 +202,7 @@ const MapPanZoom: React.FC<MapPanZoomProps> = ({ viewBox = '0 0 1000 1000', clas
             className={`relative overflow-hidden select-none ${className}`}
             onContextMenu={(e) => e.preventDefault()}
             style={{
-                touchAction: 'none',
+                touchAction: 'pan-y',
                 overscrollBehavior: 'contain',
                 WebkitTouchCallout: 'none',
                 WebkitTapHighlightColor: 'transparent',

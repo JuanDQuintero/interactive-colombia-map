@@ -15,6 +15,7 @@ interface CategorySelectProps {
     placeholder?: string;
     isSearchable?: boolean;
     disabled?: boolean;
+    controlHeight?: number;
 }
 
 // Z-index máximo para que el menú esté siempre por encima de cualquier modal
@@ -137,16 +138,19 @@ const darkStyles: StylesConfig<CategoryOption, false> = {
     }),
 };
 
-const CategorySelect: React.FC<CategorySelectProps> = ({ options, value, onChange, placeholder, isSearchable = false, disabled = false }) => {
+const CategorySelect: React.FC<CategorySelectProps> = ({ options, value, onChange, placeholder, isSearchable = false, disabled = false, controlHeight }) => {
     const { theme } = useTheme();
     const styles = theme === 'dark' ? darkStyles : lightStyles;
+    const sizedStyles: StylesConfig<CategoryOption, false> = controlHeight
+        ? { ...styles, control: provided => ({ ...provided, minHeight: controlHeight, height: controlHeight }) }
+        : styles;
 
     return (
         <Select
             options={options}
             value={value}
             onChange={onChange}
-            styles={styles}
+            styles={sizedStyles}
             className={`react-select-container ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
             classNamePrefix="react-select"
             placeholder={placeholder}

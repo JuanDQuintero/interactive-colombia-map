@@ -150,6 +150,15 @@
   .municipality.unmatched:hover {
     fill: var(--map-unmatched);
   }
+  .municipality-label {
+    fill: var(--ink);
+    stroke: var(--paper);
+    stroke-width: 4;
+    stroke-linejoin: round;
+    paint-order: stroke;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
   .department:focus,
   .department:focus-visible,
   .municipality:focus,

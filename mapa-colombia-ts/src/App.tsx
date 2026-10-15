@@ -1,9 +1,21 @@
-import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import { Navigate, Route, BrowserRouter as Router, Routes, useParams } from 'react-router-dom';
 import { AttractionsProvider } from './context/AttractionsProvider';
 import Loader from './components/UI/Loader';
 import { useAuth } from './hooks/useAuth';
 import LoginPage from './pages/LoginPage';
 import MainPage from './pages/MainPage';
+import type { User } from 'firebase/auth';
+
+interface MainPageRouteProps {
+  user: User;
+  logout: () => void;
+  isAdmin?: boolean;
+}
+
+function DepartmentRoute(props: MainPageRouteProps) {
+  const { departmentSlug } = useParams();
+  return <MainPage {...props} initialDepartmentSlug={departmentSlug} />;
+}
 
 function App() {
   const { user, userData, isLoading, error, login, logout } = useAuth();
@@ -27,6 +39,20 @@ function App() {
             element={
               user ? (
                 <MainPage
+                  user={user}
+                  logout={logout}
+                  isAdmin={userData?.isAdmin}
+                />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/departamento/:departmentSlug"
+            element={
+              user ? (
+                <DepartmentRoute
                   user={user}
                   logout={logout}
                   isAdmin={userData?.isAdmin}

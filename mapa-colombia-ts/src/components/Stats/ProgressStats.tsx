@@ -27,7 +27,6 @@ const ProgressStats: React.FC<ProgressStatsProps> = ({
         <div className="panel p-5">
             <div className="flex items-center gap-3">
                 <h3 className="font-display text-[15px] font-semibold text-ink">{title}</h3>
-                <span className="rule-fill" />
             </div>
 
             <div className="mt-4">
@@ -45,7 +44,7 @@ const ProgressStats: React.FC<ProgressStatsProps> = ({
                 </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-3 gap-2 border-t border-dashed border-rule pt-4 text-center">
+            <div className="mt-5 grid grid-cols-3 gap-2 pt-4 text-center">
                 <div>
                     <p className="font-display text-2xl font-semibold tabular-nums leading-none text-forest">{completed}</p>
                     <p className="micro mt-1.5">{completedLabel}</p>

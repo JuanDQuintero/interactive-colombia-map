@@ -35,7 +35,6 @@ const Legend: React.FC<LegendProps> = ({
         <div className="panel p-5">
             <div className="flex items-center gap-3">
                 <h3 className="micro">Leyenda</h3>
-                <span className="rule-fill" />
             </div>
             <div className="mt-4 space-y-2.5">
                 <LegendItem colorClass={completedColor} label={completedLabel} count={completed} />

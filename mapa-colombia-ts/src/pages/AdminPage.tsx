@@ -40,7 +40,7 @@ const AdminPage: React.FC<{ user: User }> = ({ user }) => {
     };
 
     const tabClass = (active: boolean) =>
-        `-mb-px flex items-center gap-2 border-b-2 pb-3 text-[13px] font-semibold uppercase tracking-[0.14em] transition-colors ${active
+        `-mb-px flex items-center border-b-2 pb-3 text-[13px] font-semibold uppercase tracking-[0.14em] transition-colors ${active
             ? 'border-ink text-ink'
             : 'border-transparent text-ink-faint hover:text-ink-soft'
         }`;
@@ -55,13 +55,13 @@ const AdminPage: React.FC<{ user: User }> = ({ user }) => {
                                 onClick={() => setActiveTab('proposals')}
                                 className={tabClass(activeTab === 'proposals')}
                             >
-                                <span className="text-clay">01</span> Propuestas{proposalCounts.pending > 0 && ` (${proposalCounts.pending})`}
+                                Propuestas{proposalCounts.pending > 0 && ` (${proposalCounts.pending})`}
                             </button>
                             <button
                                 onClick={() => setActiveTab('attractions')}
                                 className={tabClass(activeTab === 'attractions')}
                             >
-                                <span className="text-clay">02</span> Atractivos{attractionCount > 0 && ` (${attractionCount})`}
+                                Atractivos{attractionCount > 0 && ` (${attractionCount})`}
                             </button>
                         </div>
 
