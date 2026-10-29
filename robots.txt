@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://juandquintero.github.io/interactive-colombia-map/sitemap.xml
